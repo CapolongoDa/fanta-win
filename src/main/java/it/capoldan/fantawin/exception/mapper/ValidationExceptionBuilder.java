@@ -5,8 +5,7 @@ import it.capoldan.fantawin.exception.config.ExceptionHelper;
 import it.capoldan.fantawin.generated.openapi.server.v1.dto.ProblemError;
 import org.springframework.util.CollectionUtils;
 import org.springframework.validation.FieldError;
-
-import javax.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolation;
 import java.util.List;
 import java.util.Set;
 

@@ -5,13 +5,12 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import it.capoldan.fantawin.exception.HttpResponseException;
 import it.capoldan.fantawin.exception.mapper.DtoProblemToProblemErrorMapper;
 import it.capoldan.fantawin.generated.openapi.server.v1.dto.Problem;
+import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.util.StreamUtils;
 import org.springframework.web.client.ResponseErrorHandler;
-
-import javax.validation.constraints.NotNull;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;

@@ -4,6 +4,7 @@ package it.capoldan.fantawin.exception;
 import it.capoldan.fantawin.exception.config.Exception;
 import it.capoldan.fantawin.generated.openapi.server.v1.dto.Problem;
 import it.capoldan.fantawin.generated.openapi.server.v1.dto.ProblemError;
+import jakarta.validation.constraints.NotNull;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.NestedRuntimeException;
@@ -11,7 +12,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
-import javax.validation.constraints.NotNull;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.ArrayList;

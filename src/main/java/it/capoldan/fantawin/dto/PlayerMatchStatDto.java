@@ -13,7 +13,7 @@ public class PlayerMatchStatDto {
 
     private String playerId;
 
-    private Integer matchday;
+    private Integer matchDay;
 
     private String season;
 

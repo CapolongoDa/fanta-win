@@ -1,6 +1,5 @@
 package it.capoldan.fantawin.dto;
 
-import it.capoldan.fantawin.middleware.dao.dynamo.entity.AvailabilityStatus;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;

@@ -10,6 +10,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
+import java.io.IOException;
 import java.time.OffsetDateTime;
 
 /**
@@ -44,6 +45,8 @@ public class ResponseEntityExceptionHandler {
             try (JsonParser reader = objectMapper.createParser(exceptionHelper.generateFallbackProblem())){
                 Problem fallbackproblem = reader.readValueAs(Problem.class);
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(fallbackproblem);
+            } catch (IOException exception) {
+                throw new java.lang.RuntimeException(exception);
             }
         }
     }

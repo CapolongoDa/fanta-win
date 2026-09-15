@@ -1,8 +1,8 @@
 package it.capoldan.fantawin.exception.mapper;
 
 import it.capoldan.fantawin.generated.openapi.server.v1.dto.ProblemError;
+import jakarta.validation.ConstraintViolation;
 
-import javax.validation.ConstraintViolation;
 
 public class ConstraintViolationToProblemErrorMapper {
 

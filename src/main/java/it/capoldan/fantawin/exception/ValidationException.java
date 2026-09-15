@@ -3,9 +3,8 @@ package it.capoldan.fantawin.exception;
 import it.capoldan.fantawin.exception.config.ExceptionHelper;
 
 import it.capoldan.fantawin.generated.openapi.server.v1.dto.ProblemError;
+import jakarta.validation.ConstraintViolation;
 import org.springframework.http.HttpStatus;
-
-import javax.validation.ConstraintViolation;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;

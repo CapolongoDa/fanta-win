@@ -9,6 +9,8 @@ import it.capoldan.fantawin.exception.mapper.FieldErrorToProblemErrorMapper;
 import it.capoldan.fantawin.exception.mapper.ValidationExceptionBuilder;
 import it.capoldan.fantawin.generated.openapi.server.v1.dto.Problem;
 import it.capoldan.fantawin.generated.openapi.server.v1.dto.ProblemError;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -16,8 +18,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.validation.FieldError;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.web.server.ResponseStatusException;
-
-import javax.validation.ConstraintViolation;
 import java.time.Instant;
 import java.util.*;
 
@@ -51,7 +51,7 @@ public class ExceptionHelper {
         Problem res;
 
         // gestione dedicata delle constraintviolation, lanciate da spring direttamente
-        if (ex instanceof javax.validation.ConstraintViolationException constraintViolationException) {
+        if (ex instanceof ConstraintViolationException constraintViolationException) {
             // eccezione di constraint, recupero le info dei campi
             ex = new ValidationExceptionBuilder<>(this)
                     .validationErrors(constraintViolationException.getConstraintViolations())
@@ -142,8 +142,7 @@ public class ExceptionHelper {
 
     public List<ProblemError> generateProblemErrorsFromConstraintViolation(Set<? extends ConstraintViolation<?>> constraintViolations)
     {
-        return constraintViolations.stream().map(constraintViolation ->
-               ConstraintViolationToProblemErrorMapper.toProblemError(constraintViolation)).toList();
+        return constraintViolations.stream().map(ConstraintViolationToProblemErrorMapper::toProblemError).toList();
     }
 
 

@@ -1,4 +1,4 @@
-package it.capoldan.fantawin.dao;
+package it.capoldan.fantawin.dto;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class FixtureDto {
 
-    private Integer matchday;
+    private Integer matchDay;
 
     private String realTeam;
 
