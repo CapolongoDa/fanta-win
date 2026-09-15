@@ -47,6 +47,7 @@ Parameters:
   CpuValue:
     Type: Number
     Default: 1024
+
   MemoryAmount:
     Type: String
     Default: 2GB
@@ -56,18 +57,23 @@ Parameters:
   AutoscalingCheckPeriod:
     Type: Number
     Default: 60
+
   AutoscalingThreshold:
     Type: Number
     Default: 70
+
   MinTasksNumber:
     Type: Number
     Default: 1
+
   MaxTasksNumber:
     Type: Number
     Default: 3
+
   AutoscalingDataPointN:
     Type: Number
     Default: 1
+
   AutoscalingDataPointM:
     Type: Number
     Default: 1
@@ -99,12 +105,32 @@ Parameters:
     Type: String
     Default: FATAL
 
-  # From storage stack
   EcsLogGroup:
     Type: String
+  #DynamoDb Tables
   RosterTableName:
     Type: String
   RosterTableArn:
+    Type: String
+
+  PlayersTableName:
+    Type: String
+  PlayersTableArn:
+    Type: String
+
+  PlayerMatchStatsTableName:
+    Type: String
+  PlayerMatchStatsTableArn:
+    Type: String
+
+  FixturesTableName:
+    Type: String
+  FixturesTableArn:
+    Type: String
+
+  AvailabilityReportsTableName:
+    Type: String
+  AvailabilityReportsTableArn:
     Type: String
 
 Resources:
@@ -133,6 +159,10 @@ Resources:
         ContainerEnvEntry1: !Sub 'AWS_REGIONCODE=${AWS::Region}'
         ContainerEnvEntry2: !Sub 'WIRE_TAP_LOG=${WireTapLogActivation}'
         ContainerEnvEntry3: !Sub 'FANTA_WIN_DAO_ROSTERTABLENAME=${RosterTableName}'
+        ContainerEnvEntry4: !Sub 'FANTA_WIN_DAO_PLAYERSTABLENAME=${PlayersTableName}'
+        ContainerEnvEntry5: !Sub 'FANTA_WIN_DAO_PLAYERMATCHSTATSTABLENAME=${PlayerMatchStatsTableName}'
+        ContainerEnvEntry6: !Sub 'FANTA_WIN_DAO_FIXTURESTABLENAME=${FixturesTableName}'
+        ContainerEnvEntry7: !Sub 'FANTA_WIN_DAO_AVAILABILITYREPORTSTABLENAME=${AvailabilityReportsTableName}'
         ApplicativeEnvFileChecksum: !Ref ApplicativeEnvFileChecksum
         MappedPaths: '/api/v1/*'
         ECSClusterName: !Ref ECSClusterName
@@ -159,6 +189,10 @@ Resources:
         DynamoDBTableNames: !Join
           - ','
           - - !Ref RosterTableName
+            - !Ref PlayersTableName
+            - !Ref PlayerMatchStatsTableName
+            - !Ref FixturesTableName
+            - !Ref AvailabilityReportsTableName
         LogGroupsNames: !Join
           - ','
           - - !Sub '/aws/ecs/${ProjectName}-fanta-win'
@@ -181,3 +215,11 @@ Resources:
             Resource:
               - !Ref RosterTableArn
               - !Sub "${RosterTableArn}/*"
+              - !Ref PlayersTableArn
+              - !Sub "${PlayersTableArn}/*"
+              - !Ref PlayerMatchStatsTableArn
+              - !Sub "${PlayerMatchStatsTableArn}/*"
+              - !Ref FixturesTableArn
+              - !Sub "${FixturesTableArn}/*"
+              - !Ref AvailabilityReportsTableArn
+              - !Sub "${AvailabilityReportsTableArn}/*"

@@ -46,6 +46,82 @@ Resources:
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
 
+  # Anagrafica statica dei giocatori (PK: playerId)
+  PlayersTable:
+    Type: AWS::DynamoDB::Table
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+    Properties:
+      TableName: !Sub '${ProjectName}-Players'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: playerId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: playerId
+          KeyType: HASH
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+
+  # Statistiche per giornata (PK: playerId, SK: matchday)
+  PlayerMatchStatsTable:
+    Type: AWS::DynamoDB::Table
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+    Properties:
+      TableName: !Sub '${ProjectName}-PlayerMatchStats'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: playerId
+          AttributeType: S
+        - AttributeName: matchday
+          AttributeType: N
+      KeySchema:
+        - AttributeName: playerId
+          KeyType: HASH
+        - AttributeName: matchday
+          KeyType: RANGE
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+
+  # Calendario/difficolta' match (PK: matchday, SK: realTeam)
+  FixturesTable:
+    Type: AWS::DynamoDB::Table
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+    Properties:
+      TableName: !Sub '${ProjectName}-Fixtures'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: matchday
+          AttributeType: N
+        - AttributeName: realTeam
+          AttributeType: S
+      KeySchema:
+        - AttributeName: matchday
+          KeyType: HASH
+        - AttributeName: realTeam
+          KeyType: RANGE
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+
+  # Ultimo stato di disponibilita' dei giocatori (PK: playerId)
+  AvailabilityReportsTable:
+    Type: AWS::DynamoDB::Table
+    UpdateReplacePolicy: Retain
+    DeletionPolicy: Retain
+    Properties:
+      TableName: !Sub '${ProjectName}-AvailabilityReports'
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: playerId
+          AttributeType: S
+      KeySchema:
+        - AttributeName: playerId
+          KeyType: HASH
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+
   # Log group del microservizio
   FantaWinLogGroup:
     Type: AWS::CloudFormation::Stack
@@ -65,6 +141,34 @@ Outputs:
   RosterTableArn:
     Description: ARN della tabella DynamoDB della rosa
     Value: !GetAtt RosterTable.Arn
+
+  PlayersTableName:
+    Description: Nome della tabella DynamoDB dei giocatori
+    Value: !Ref PlayersTable
+  PlayersTableArn:
+    Description: ARN della tabella DynamoDB dei giocatori
+    Value: !GetAtt PlayersTable.Arn
+
+  PlayerMatchStatsTableName:
+    Description: Nome della tabella DynamoDB delle statistiche per giornata
+    Value: !Ref PlayerMatchStatsTable
+  PlayerMatchStatsTableArn:
+    Description: ARN della tabella DynamoDB delle statistiche per giornata
+    Value: !GetAtt PlayerMatchStatsTable.Arn
+
+  FixturesTableName:
+    Description: Nome della tabella DynamoDB del calendario
+    Value: !Ref FixturesTable
+  FixturesTableArn:
+    Description: ARN della tabella DynamoDB del calendario
+    Value: !GetAtt FixturesTable.Arn
+
+  AvailabilityReportsTableName:
+    Description: Nome della tabella DynamoDB delle disponibilita'
+    Value: !Ref AvailabilityReportsTable
+  AvailabilityReportsTableArn:
+    Description: ARN della tabella DynamoDB delle disponibilita'
+    Value: !GetAtt AvailabilityReportsTable.Arn
 
   EcsLogGroup:
     Description: Nome del log group ECS
