@@ -1,0 +1,11 @@
+{
+  "Parameters": {
+    "CpuValue": "2048",
+    "MemoryAmount": "4GB",
+    "MinTasksNumber": "1",
+    "MaxTasksNumber": "1",
+    "AutoscalingThreshold": "650",
+    "WireTapLogActivation": "false",
+    "MountEfs": "false"
+  }
+}

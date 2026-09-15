@@ -1,0 +1,309 @@
+openapi: 3.0.3
+info:
+  title: API B2B Gestione Rosa e Predizione Formazione
+  description: >-
+    API REST B2B per la gestione della rosa su DynamoDB e il calcolo predittivo 
+    della formazione ottimale di Fantacalcio (FantaClaude).
+  version: 2.3.0
+  x-api-id: fantaclaude-lineup-manager-api-b2b
+  termsOfService: https://fantaclaude.ai/termini-di-servizio
+  contact:
+    name: Supporto FantaClaude
+    url: https://fantaclaude.ai/supporto
+servers:
+  - url: http://localhost:8080/api/v1
+    description: Ambiente locale di sviluppo
+  - url: https://api.fantaclaude.ai/v1
+    description: Ambiente di produzione
+
+tags:
+  - name: Roster
+    description: Gestione dei calciatori all'interno della rosa dell'utente su DynamoDB
+  - name: Prediction
+    description: Calcolo predittivo dell'undici titolare, della panchina e del modulo ideale
+
+paths:
+  /roster:
+    get:
+      summary: Recupera la rosa completa dell'utente
+      description: Restituisce l'elenco di tutti i calciatori divisi per ruolo presenti in rosa.
+      operationId: getRoster
+      tags:
+        - Roster
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RosterResponse'
+        '404':
+          description: Not Found Roster
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
+
+    post:
+      summary: Aggiunge o aggiorna un giocatore nella rosa
+      description: Inserisce un nuovo calciatore o ne aggiorna le statistiche e lo stato corrente.
+      operationId: addOrUpdatePlayer
+      tags:
+        - Roster
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Player'
+      responses:
+        '200':
+          description: Giocatore salvato con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Player'
+        '400':
+          description: Invalid player data
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
+
+  /roster/{playerId}:
+    delete:
+      summary: Rimuove un giocatore dalla rosa
+      description: Elimina un calciatore specifico dalla tabella DynamoDB tramite il suo identificativo.
+      operationId: deletePlayer
+      tags:
+        - Roster
+      parameters:
+        - name: playerId
+          in: path
+          required: true
+          description: ID unico del calciatore
+          schema:
+            type: string
+            example: PLAYER#inter_lautaro
+      responses:
+        '204':
+          description: Giocatore rimosso con successo
+        '404':
+          description: Player not found
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
+
+  /predict/lineup:
+    post:
+      summary: Calcola l'undici titolare e la panchina ottimale per la giornata
+      description: >
+        Elabora i dati attuali della rosa (stato di forma, storico avversario, impegni europei/infrasettimanali e titolarità)
+        e applica i moduli logici del FantaRating per calcolare la formazione ideale e il Modificatore di Difesa.
+      operationId: calculateOptimalLineup
+      tags:
+        - Prediction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LineupRequest'
+      responses:
+        '200':
+          description: Calcolo predittivo completato con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LineupResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
+
+components:
+  schemas:
+    RosterResponse:
+      type: object
+      required:
+        - goalkeepers
+        - defenders
+        - midfielders
+        - forwards
+      properties:
+        goalkeepers:
+          type: array
+          items:
+            $ref: '#/components/schemas/Player'
+        defenders:
+          type: array
+          items:
+            $ref: '#/components/schemas/Player'
+        midfielders:
+          type: array
+          items:
+            $ref: '#/components/schemas/Player'
+        forwards:
+          type: array
+          items:
+            $ref: '#/components/schemas/Player'
+
+    Player:
+      type: object
+      required:
+        - id
+        - name
+        - realTeam
+        - position
+        - status
+        - nextOpponent
+        - startingProbability
+        - recentScores
+      properties:
+        id:
+          type: string
+          description: id del giocatore
+          example: PLAYER#inter_lautaro
+        name:
+          type: string
+          example: Lautaro Martinez
+        realTeam:
+          type: string
+          example: Inter
+        position:
+          type: string
+          enum: [POR, DIF, CEN, ATT]
+          example: ATT
+        status:
+          type: string
+          enum: [DISPONIBILE, IN_DUBBIO, INFORTUNATO, SQUALIFICATO]
+          example: DISPONIBILE
+        nextOpponent:
+          type: string
+          example: Empoli
+        startingProbability:
+          type: number
+          format: float
+          description: Probabilità di titolarità in percentuale (0-100)
+          example: 85.0
+        recentScores:
+          type: array
+          description: Ultimi voti/fantamedia ottenuti nelle ultime 3-5 partite
+          items:
+            type: number
+            format: float
+          example: [7.5, 6.0, 10.0]
+
+    LineupRequest:
+      type: object
+      required:
+        - matchday
+        - modifierActive
+        - teamsWithMidweekMatches
+      properties:
+        matchday:
+          type: integer
+          description: Numero della giornata di Serie A
+          example: 8
+        modifierActive:
+          type: boolean
+          description: Abilita il calcolo del Modificatore di Difesa
+          example: true
+        teamsWithMidweekMatches:
+          type: array
+          description: Lista delle squadre di Serie A impegnate in coppe europee o infrasettimanali (+/- 3 giorni)
+          items:
+            type: string
+          example: [Inter, Milan, Atalanta]
+
+    LineupResponse:
+      type: object
+      required:
+        - winningFormation
+        - totalExpectedScore
+        - defenseModifierBonus
+        - startingEleven
+        - bench
+      properties:
+        winningFormation:
+          type: string
+          description: Modulo tattico ottimale selezionato (3-4-3, 4-3-3, 3-5-2, 4-4-2)
+          example: 4-3-3
+        totalExpectedScore:
+          type: number
+          format: float
+          description: Punteggio totale atteso calcolato dall'algoritmo
+          example: 74.8
+        defenseModifierBonus:
+          type: integer
+          description: Bonus aggiunto dal Modificatore di Difesa (+0, +1, +3, +6)
+          example: 3
+        startingEleven:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlayerRatingDetails'
+        bench:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlayerRatingDetails'
+
+    PlayerRatingDetails:
+      type: object
+      required:
+        - player
+        - fantaRating
+        - fantaRatingBreakdown
+      properties:
+        player:
+          $ref: '#/components/schemas/Player'
+        fantaRating:
+          type: number
+          format: float
+          description: Rating finale di schierabilità (da 1 a 10)
+          example: 8.4
+        fantaRatingBreakdown:
+          $ref: '#/components/schemas/FantaRatingBreakdown'
+
+    FantaRatingBreakdown:
+      type: object
+      required:
+        - baseFormScore
+        - historicalScore
+        - matchDifficultyXgScore
+        - midweekPenalty
+        - availabilityPenalty
+      properties:
+        baseFormScore:
+          type: number
+          format: float
+          description: Punteggio dal 40% sul recente stato di forma
+          example: 3.2
+        historicalScore:
+          type: number
+          format: float
+          description: Punteggio dal 30% sullo storico contro l'avversario
+          example: 2.1
+        matchDifficultyXgScore:
+          type: number
+          format: float
+          description: Punteggio dal 30% sulla difficoltà del match e xG/xA
+          example: 2.5
+        midweekPenalty:
+          type: number
+          format: float
+          description: Penalità applicata per partite infrasettimanali/coppe
+          example: -0.8
+        availabilityPenalty:
+          type: number
+          format: float
+          description: Penalità applicata per ballottaggi o dubbio titolarità
+          example: 0.0

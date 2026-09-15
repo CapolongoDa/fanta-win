@@ -1,0 +1,17 @@
+{
+    "openapi": [
+        {
+            "intendedUsage": "B2B",
+            "commonFiles": [],
+            "openapiFiles": [
+                "fanta-win-api-internal.yaml",
+                "problem-internal.yaml"
+            ],
+            "servicePath": "fanta-win",
+            "generateBundle": true,
+            "mergeBeforeBundleGeneration": true
+        }
+    ],
+    "openapiBundlePresenceCheck": []
+}
+    

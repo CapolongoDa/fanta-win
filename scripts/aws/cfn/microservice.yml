@@ -1,0 +1,183 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: FantaWin microservice deploy
+
+Parameters:
+  ProjectName:
+    Type: String
+    Description: Nome dell'ambiente/progetto
+
+  AlarmSNSTopicArn:
+    Type: String
+    Description: ARN del topic SNS per gli allarmi
+
+  ContainerImageUri:
+    Type: String
+    Description: URI completo dell'immagine container
+
+  MicroserviceNumber:
+    Type: Number
+    Description: Disambiguazione per le regole del load balancer
+
+  TemplateBucketBaseUrl:
+    Type: String
+    Description: Bucket S3 da cui caricare i frammenti di template
+
+  ECSClusterName:
+    Type: String
+
+  SubnetsIds:
+    Type: CommaDelimitedList
+
+  VpcId:
+    Type: String
+
+  EcsDefaultSecurityGroup:
+    Type: String
+
+  ApplicationLoadBalancerListenerArn:
+    Type: String
+
+  ApplicationLoadBalancerDomain:
+    Type: String
+
+  AlbSecurityGroup:
+    Type: String
+
+  # Instance parameters
+  CpuValue:
+    Type: Number
+    Default: 1024
+  MemoryAmount:
+    Type: String
+    Default: 2GB
+    AllowedValues: [ 2GB, 4GB, 6GB, 8GB ]
+
+  # Autoscaling
+  AutoscalingCheckPeriod:
+    Type: Number
+    Default: 60
+  AutoscalingThreshold:
+    Type: Number
+    Default: 70
+  MinTasksNumber:
+    Type: Number
+    Default: 1
+  MaxTasksNumber:
+    Type: Number
+    Default: 3
+  AutoscalingDataPointN:
+    Type: Number
+    Default: 1
+  AutoscalingDataPointM:
+    Type: Number
+    Default: 1
+
+  ApplicativeEnvFileChecksum:
+    Type: String
+    Default: ''
+
+  WireTapLogActivation:
+    Type: String
+    Default: false
+    AllowedValues: [ true, false ]
+
+  # Health check
+  HealthCheckInterval:
+    Type: Number
+    Default: 60
+  HealthCheckTimeout:
+    Type: Number
+    Default: 5
+  HealthyThresholdCount:
+    Type: Number
+    Default: 5
+  UnhealthyThresholdCount:
+    Type: Number
+    Default: 2
+
+  LogAlarmStrategy:
+    Type: String
+    Default: FATAL
+
+  # From storage stack
+  EcsLogGroup:
+    Type: String
+  RosterTableName:
+    Type: String
+  RosterTableArn:
+    Type: String
+
+Resources:
+  FantaWinMicroservice:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub "${TemplateBucketBaseUrl}/fragments/ecs-service.yaml"
+      Parameters:
+        MicroServiceUniqueName: !Sub '${ProjectName}-fanta-win'
+        CpuValue: !Ref CpuValue
+        MemoryAmount: !Ref MemoryAmount
+        HealthCheckTimeout: !Ref HealthCheckTimeout
+        HealthCheckInterval: !Ref HealthCheckInterval
+        HealthyThresholdCount: !Ref HealthyThresholdCount
+        UnhealthyThresholdCount: !Ref UnhealthyThresholdCount
+        AutoscalingStrategy: REST
+        AutoscalingThreshold: !Ref AutoscalingThreshold
+        AutoscalingCheckPeriod: !Ref AutoscalingCheckPeriod
+        MinTasksNumber: !Ref MinTasksNumber
+        MaxTasksNumber: !Ref MaxTasksNumber
+        AutoscalingDataPointN: !Ref AutoscalingDataPointN
+        AutoscalingDataPointM: !Ref AutoscalingDataPointM
+        AlarmSNSTopicArn: !Ref AlarmSNSTopicArn
+        WireTapLogActivation: !Ref WireTapLogActivation
+        ContainerImageURI: !Sub '${ContainerImageUri}'
+        ContainerEnvEntry1: !Sub 'AWS_REGIONCODE=${AWS::Region}'
+        ContainerEnvEntry2: !Sub 'WIRE_TAP_LOG=${WireTapLogActivation}'
+        ContainerEnvEntry3: !Sub 'FANTA_WIN_DAO_ROSTERTABLENAME=${RosterTableName}'
+        ApplicativeEnvFileChecksum: !Ref ApplicativeEnvFileChecksum
+        MappedPaths: '/api/v1/*'
+        ECSClusterName: !Ref ECSClusterName
+        Subnets: !Join [ ',', !Ref SubnetsIds ]
+        VpcId: !Ref VpcId
+        EcsDefaultSecurityGroup: !Ref EcsDefaultSecurityGroup
+        LoadBalancerListenerArn: !Ref ApplicationLoadBalancerListenerArn
+        LoadbalancerRulePriority: !Ref MicroserviceNumber
+        TaskRoleManagedPolicyArn: !Ref FantaWinMicroserviceTaskManagedPolicy
+        AlbSecurityGroup: !Ref AlbSecurityGroup
+        EcsLogGroup: !Ref EcsLogGroup
+        LogAlarmStrategyV1: !Ref LogAlarmStrategy
+
+  # Dashboard CloudWatch
+  FantaWinMicroserviceCloudWatchDashboard:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: !Sub "${TemplateBucketBaseUrl}/fragments/microservice-cloudwatch-dashboard.yaml"
+      Parameters:
+        DashboardName: !Sub "${ProjectName}-fanta-win"
+        AlarmArns: !Join
+          - ','
+          - - !GetAtt FantaWinMicroservice.Outputs.FatalLogsMetricAlarmArn
+        DynamoDBTableNames: !Join
+          - ','
+          - - !Ref RosterTableName
+        LogGroupsNames: !Join
+          - ','
+          - - !Sub '/aws/ecs/${ProjectName}-fanta-win'
+
+  # Permessi operativi del microservizio sulla tabella della rosa
+  FantaWinMicroserviceTaskManagedPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Action:
+              - dynamodb:GetItem
+              - dynamodb:BatchGetItem
+              - dynamodb:Query
+              - dynamodb:PutItem
+              - dynamodb:UpdateItem
+              - dynamodb:DeleteItem
+            Resource:
+              - !Ref RosterTableArn
+              - !Sub "${RosterTableArn}/*"
