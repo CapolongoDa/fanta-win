@@ -1,8 +1,10 @@
 package it.capoldan.fantawin.exception.config;
 
 
+import it.capoldan.fantawin.exception.ConcurrentUpdateException;
 import it.capoldan.fantawin.exception.InternalException;
 import it.capoldan.fantawin.exception.RuntimeException;
+import it.capoldan.fantawin.exception.ServiceUnavailableException;
 import it.capoldan.fantawin.exception.TooManyRequestException;
 import it.capoldan.fantawin.exception.mapper.ConstraintViolationToProblemErrorMapper;
 import it.capoldan.fantawin.exception.mapper.FieldErrorToProblemErrorMapper;
@@ -18,6 +20,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.validation.FieldError;
 import org.springframework.web.reactive.function.client.WebClientResponseException;
 import org.springframework.web.server.ResponseStatusException;
+import software.amazon.awssdk.core.exception.SdkClientException;
+import software.amazon.awssdk.services.dynamodb.model.ConditionalCheckFailedException;
+import software.amazon.awssdk.services.dynamodb.model.ProvisionedThroughputExceededException;
+import software.amazon.awssdk.services.dynamodb.model.RequestLimitExceededException;
 import java.time.Instant;
 import java.util.*;
 
@@ -50,6 +56,14 @@ public class ExceptionHelper {
         // gestione exception e generazione fault
         Problem res;
 
+        // CompletableFuture (usata dall'SDK DynamoDB async) incapsula sempre la vera causa in un
+        // CompletionException: senza questo unwrap, eccezioni come SdkClientException arriverebbero
+        // qui nascoste dentro il wrapper e sfuggirebbero alla classificazione sottostante, finendo
+        // tutte nel fallback generico 500 invece che nello stato HTTP corretto.
+        if (ex instanceof java.util.concurrent.CompletionException && ex.getCause() != null) {
+            ex = ex.getCause();
+        }
+
         // gestione dedicata delle constraintviolation, lanciate da spring direttamente
         if (ex instanceof ConstraintViolationException constraintViolationException) {
             // eccezione di constraint, recupero le info dei campi
@@ -78,6 +92,20 @@ public class ExceptionHelper {
                     Objects.requireNonNull(responseStatusException.getReason() == null ?  "Web error" : responseStatusException.getReason()),
                     responseStatusException.getStatusCode().value(),
                     ERROR_CODE_WEB_GENERIC_ERROR, null, null, responseStatusException);
+        }
+        // scrittura DynamoDB rifiutata dal controllo di versione ottimistico (@DynamoDbVersionAttribute):
+        // un'altra richiesta ha modificato la stessa risorsa nel frattempo -> 409, non 500 generico
+        else if (ex instanceof ConditionalCheckFailedException conditionalCheckFailedException) {
+            ex = new ConcurrentUpdateException("Risorsa modificata da un'altra richiesta nel frattempo", conditionalCheckFailedException);
+        }
+        // DynamoDB throttling: capacita' provisionata superata o rate limit dell'account -> 429, non 500 generico
+        else if (ex instanceof ProvisionedThroughputExceededException || ex instanceof RequestLimitExceededException) {
+            ex = new TooManyRequestException("Limite di throughput DynamoDB superato, riprovare", ex);
+        }
+        // DynamoDB/LocalStack non raggiungibile a livello di trasporto (connessione rifiutata, timeout,
+        // credenziali non risolte): dipendenza esterna temporaneamente indisponibile -> 503, non 500 generico
+        else if (ex instanceof SdkClientException sdkClientException) {
+            ex = new ServiceUnavailableException("Storage DynamoDB non raggiungibile al momento", sdkClientException);
         }
 
         // se non è una nostra Exception, la incapsulo in un errore interno generico

@@ -1,9 +1,9 @@
 package it.capoldan.fantawin.service;
 
 import it.capoldan.fantawin.dto.*;
+import it.capoldan.fantawin.exception.DataIntegrityException;
 import it.capoldan.fantawin.exception.ExceptionsCodes;
 import it.capoldan.fantawin.exception.IdConflictException;
-import it.capoldan.fantawin.exception.InternalException;
 import it.capoldan.fantawin.exception.NotFoundException;
 import it.capoldan.fantawin.generated.openapi.server.v1.dto.Player;
 import it.capoldan.fantawin.generated.openapi.server.v1.dto.RosterResponse;
@@ -116,9 +116,7 @@ public class RosterService {
                                         .then(rosterDao.save(roster))
                                         .then(buildApiPlayer(request.getId(), Map.<String, FixtureDto>of()));
                             });
-                })
-                .onErrorMap(ex -> !(ex instanceof it.capoldan.fantawin.exception.RuntimeException),
-                        ex -> new InternalException("Errore nel salvataggio del giocatore", ex));
+                });
     }
 
     public Mono<Void> deletePlayer(String playerId, String rosterId) {
@@ -140,10 +138,11 @@ public class RosterService {
     }
 
     private Mono<Player> buildApiPlayer(String playerId, Map<String, FixtureDto> fixturesByTeam) {
+        // Il giocatore e' referenziato dalla rosa ma assente dall'anagrafica: incoerenza tra
+        // tabelle DynamoDB, non un generico errore interno - va segnalata come tale.
         Mono<PlayerDto> playerMono = playerDao.getById(playerId)
-                .switchIfEmpty(Mono.error(new InternalException(
-                        "Player " + playerId + " presente in rosa ma non trovato nel registry",
-                        ExceptionsCodes.ERROR_CODE_GENERIC_ERROR)));
+                .switchIfEmpty(Mono.error(new DataIntegrityException(
+                        "Player " + playerId + " presente in rosa ma non trovato nel registry")));
 
         Mono<AvailabilityReportDto> availabilityMono = availabilityReportDao.getById(playerId)
                 .defaultIfEmpty(AvailabilityReportDto.builder()

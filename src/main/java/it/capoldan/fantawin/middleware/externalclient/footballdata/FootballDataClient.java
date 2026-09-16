@@ -1,6 +1,6 @@
 package it.capoldan.fantawin.middleware.externalclient.footballdata;
 
-import it.capoldan.fantawin.exception.InternalException;
+import it.capoldan.fantawin.exception.ExternalServiceException;
 import it.capoldan.fantawin.generated.openapi.msclient.football_data.api.FootballDataApi;
 import it.capoldan.fantawin.generated.openapi.msclient.football_data.model.MatchesResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -30,7 +30,7 @@ public class FootballDataClient {
                         .maxBackoff(Duration.ofSeconds(5))
                         .filter(FootballDataClient::isRetryable)
                         .onRetryExhaustedThrow((spec, signal) ->
-                                new InternalException(
+                                new ExternalServiceException(
                                         "Football-Data.org non raggiungibile dopo retry per teamId=" + teamId,
                                         signal.failure())))
                 .doOnError(ex -> log.error("Errore chiamando Football-Data.org, teamId={}", teamId, ex));

@@ -2,8 +2,7 @@ package it.capoldan.fantawin.utils;
 
 import it.capoldan.fantawin.config.FantaWinConfigs;
 import it.capoldan.fantawin.dto.PlayerCalculation;
-import it.capoldan.fantawin.exception.ExceptionsCodes;
-import it.capoldan.fantawin.exception.InternalException;
+import it.capoldan.fantawin.exception.IncompleteRosterException;
 import it.capoldan.fantawin.generated.openapi.server.v1.dto.LineupRequest;
 import it.capoldan.fantawin.generated.openapi.server.v1.dto.LineupResponse;
 import it.capoldan.fantawin.generated.openapi.server.v1.dto.Player;
@@ -38,7 +37,7 @@ public class FormationSelector {
 
         List<PlayerRatingDetails> goalkeepers = byRole.getOrDefault("POR", List.of());
         if (goalkeepers.isEmpty()) {
-            throw new InternalException("Nessun portiere disponibile per il calcolo", ExceptionsCodes.ERROR_CODE_GENERIC_ERROR);
+            throw new IncompleteRosterException("Nessun portiere disponibile per il calcolo: verifica stato e disponibilita' dei portieri in rosa");
         }
 
         String bestFormation = null;
@@ -83,7 +82,7 @@ public class FormationSelector {
         }
 
         if (bestFormation == null) {
-            throw new InternalException("Rosa insufficiente per comporre uno qualsiasi dei moduli previsti", ExceptionsCodes.ERROR_CODE_GENERIC_ERROR);
+            throw new IncompleteRosterException("Rosa insufficiente per comporre uno qualsiasi dei moduli previsti (3-4-3, 4-3-3, 3-5-2, 4-4-2)");
         }
 
         List<PlayerRatingDetails> eligibleDetails = eligible.stream().map(PlayerCalculation::details).toList();
