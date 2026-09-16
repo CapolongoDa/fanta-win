@@ -16,10 +16,6 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -50,46 +46,33 @@ public class LineupPredictionService {
     }
 
     public Mono<LineupResponse> calculateOptimalLineup(LineupRequest request, String rosterId) {
+        log.info("Calcolo formazione ottimale per rosterId={} matchday={} modifierActive={}",
+                rosterId, request.getMatchday(), request.getModifierActive());
         return rosterDao.getById(rosterId)
-                .switchIfEmpty(Mono.error(new NotFoundException(
-                        "Rosa " + rosterId + " non trovata", ExceptionsCodes.ERROR_CODE_NOT_FOUND)))
-                .flatMap(roster -> buildCalculations(roster.getPlayers(), request))
-                .map(allCalculations -> formationSelector.select(allCalculations, request));
-    }
-
-    private Mono<List<PlayerCalculation>> buildCalculations(List<RosterPlayerDto> rosterPlayers, LineupRequest request) {
-        if (rosterPlayers == null || rosterPlayers.isEmpty()) {
-            return Mono.just(List.of());
-        }
-
-        return Flux.fromIterable(rosterPlayers)
-                .flatMap(rosterPlayer -> playerDao.getById(rosterPlayer.getPlayerId()))
+                .switchIfEmpty(Mono.defer(() -> {
+                    log.warn("Rosa {} non trovata: impossibile calcolare la formazione", rosterId);
+                    return Mono.error(new NotFoundException(
+                            "Rosa " + rosterId + " non trovata", ExceptionsCodes.ERROR_CODE_NOT_FOUND));
+                }))
+                .flatMapMany(roster -> buildCalculations(roster.getPlayers(), request))
                 .collectList()
-                .flatMap(players -> fixturesByRealTeam(players, request.getMatchday())
-                        .flatMap(fixturesByTeam -> Flux.fromIterable(players)
-                                .flatMap(player -> buildCalculation(player, fixturesByTeam.get(player.getRealTeam()), request))
-                                .collectList()));
+                .map(allCalculations -> formationSelector.select(allCalculations, request))
+                .doOnSuccess(response -> log.info(
+                        "Formazione calcolata per rosterId={}: modulo={} punteggioTotale={} bonusDifesa={}",
+                        rosterId, response.getWinningFormation(), response.getTotalExpectedScore(), response.getDefenseModifierBonus()))
+                .doOnError(ex -> log.warn("Errore nel calcolo della formazione per rosterId={}", rosterId, ex));
     }
 
-    /** Recupera la fixture della giornata una sola volta per ciascuna squadra reale distinta
-     * presente in rosa, invece che una volta per ogni giocatore: in una rosa di 25 e' comune
-     * avere piu' giocatori della stessa squadra reale, che condividono la stessa fixture. */
-    private Mono<Map<String, FixtureDto>> fixturesByRealTeam(List<PlayerDto> players, Integer matchday) {
-        Set<String> realTeams = players.stream()
-                .map(PlayerDto::getRealTeam)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
-
-        return Flux.fromIterable(realTeams)
-                .flatMap(team -> fixtureDao.getByMatchdayAndTeam(matchday, team)
-                        .map(fixture -> Map.entry(team, fixture)))
-                .collectMap(Map.Entry::getKey, Map.Entry::getValue);
+    private Flux<PlayerCalculation> buildCalculations(List<RosterPlayerDto> players, LineupRequest request) {
+        if (players == null || players.isEmpty()) {
+            log.warn("Rosa senza giocatori: nessun calcolo possibile per la giornata {}", request.getMatchday());
+            return Flux.empty();
+        }
+        return Flux.fromIterable(players)
+                .flatMap(rosterPlayer -> buildCalculation(rosterPlayer.getPlayerId(), request));
     }
 
-    private Mono<PlayerCalculation> buildCalculation(PlayerDto player, FixtureDto fixture, LineupRequest request) {
-        FixtureDto safeFixture = fixture != null ? fixture : FixtureDto.builder().build();
-        String playerId = player.getPlayerId();
-
+    private Mono<PlayerCalculation> buildCalculation(String playerId, LineupRequest request) {
         Mono<AvailabilityReportDto> availabilityMono = availabilityReportDao.getById(playerId)
                 .defaultIfEmpty(AvailabilityReportDto.builder()
                         .playerId(playerId)
@@ -97,8 +80,23 @@ public class LineupPredictionService {
                         .startingProbability(100.0)
                         .build());
 
-        return availabilityMono.flatMap(availability ->
-                formAggregationService.computeFormComponents(playerId, safeFixture.getOpponentTeam())
-                        .map(form -> ratingCalculator.compute(player, availability, safeFixture, form, request)));
+        return playerDao.getById(playerId).flatMap(player -> {
+            Mono<FixtureDto> fixtureMono = fixtureDao.getByMatchdayAndTeam(request.getMatchday(), player.getRealTeam())
+                    .defaultIfEmpty(FixtureDto.builder().build())
+                    .doOnNext(fixture -> {
+                        if (fixture.getRealTeam() == null) {
+                            log.warn("Nessuna fixture trovata per realTeam={} matchday={}: FantaRating calcolato senza dati di difficolta' match",
+                                    player.getRealTeam(), request.getMatchday());
+                        }
+                    });
+
+            return Mono.zip(availabilityMono, fixtureMono)
+                    .flatMap(tuple -> {
+                        AvailabilityReportDto availability = tuple.getT1();
+                        FixtureDto fixture = tuple.getT2();
+                        return formAggregationService.computeFormComponents(playerId, fixture.getOpponentTeam())
+                                .map(form -> ratingCalculator.compute(player, availability, fixture, form, request));
+                    });
+        });
     }
 }

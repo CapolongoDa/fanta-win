@@ -51,6 +51,7 @@ public class FootballDataTeamIdResolver {
      * sync delle altre squadre puo' proseguire.
      */
     public Mono<Map<String, Integer>> resolveTeamIds(Set<String> realTeamNames) {
+        log.info("Risoluzione teamId Football-Data.org per {} squadre reali", realTeamNames.size());
         if (realTeamNames.isEmpty()) {
             return Mono.just(Map.of());
         }

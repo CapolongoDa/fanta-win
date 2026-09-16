@@ -55,9 +55,13 @@ public class RosterService {
     }
 
     public Mono<RosterResponse> getRoster(Integer matchday, String rosterId) {
+        log.info("Recupero roster rosterId={} matchday={}", rosterId, matchday);
         return rosterDao.getById(rosterId)
-                .switchIfEmpty(Mono.error(new NotFoundException(
-                        "Rosa " + rosterId + " non trovata", ExceptionsCodes.ERROR_CODE_NOT_FOUND)))
+                .switchIfEmpty(Mono.defer(() -> {
+                    log.warn("Rosa {} non trovata durante getRoster", rosterId);
+                    return Mono.error(new NotFoundException(
+                            "Rosa " + rosterId + " non trovata", ExceptionsCodes.ERROR_CODE_NOT_FOUND));
+                }))
                 .zipWith(fixturesForMatchday(matchday))
                 .flatMap(tuple -> {
                     RosterDto roster = tuple.getT1();
@@ -66,7 +70,12 @@ public class RosterService {
                             .flatMap(entry -> buildApiPlayer(entry.getPlayerId(), fixturesByTeam))
                             .collectList()
                             .map(players -> groupByPosition(roster.getTeamName(), players));
-                });
+                })
+                .doOnSuccess(response -> log.info("Roster rosterId={} recuperato: {} POR, {} DIF, {} CEN, {} ATT",
+                        rosterId,
+                        response.getGoalkeepers().size(), response.getDefenders().size(),
+                        response.getMidfielders().size(), response.getForwards().size()))
+                .doOnError(ex -> log.warn("Errore nel recupero del roster rosterId={}", rosterId, ex));
     }
 
     /** Un'unica query sulla partizione "matchday" per l'intera rosa (PK della tabella Fixtures),
@@ -82,6 +91,7 @@ public class RosterService {
 
     public Mono<Player> addOrUpdatePlayer(Player request, String rosterId) {
         Role role = RosterRequestMapper.toRole(request);
+        log.info("Aggiungo/aggiorno giocatore id={} ruolo={} in rosterId={}", request.getId(), role, rosterId);
 
         return rosterDao.getById(rosterId)
                 .defaultIfEmpty(RosterDto.builder().rosterId(rosterId).players(new ArrayList<>()).build())
@@ -95,6 +105,8 @@ public class RosterService {
                             .filter(p -> !p.getPlayerId().equals(request.getId()))
                             .count();
                     if (countOthers >= cap) {
+                        log.warn("Rifiuto aggiunta giocatore id={} a rosterId={}: ruolo {} gia' al completo ({}/{})",
+                                request.getId(), rosterId, role, cap, cap);
                         return Mono.error(new IdConflictException(
                                 ExceptionsCodes.ERROR_CODE_GENERIC_INVALIDPARAMETER_DUPLICATED,
                                 Map.of("fantasyRole", role.name() + " già al completo (" + cap + "/" + cap + ")")));
@@ -116,21 +128,27 @@ public class RosterService {
                                         .then(rosterDao.save(roster))
                                         .then(buildApiPlayer(request.getId(), Map.<String, FixtureDto>of()));
                             });
-                });
+                })
+                .doOnSuccess(player -> log.info("Giocatore id={} salvato in rosterId={}", request.getId(), rosterId))
+                .doOnError(ex -> log.warn("Errore nell'aggiunta/aggiornamento del giocatore id={} in rosterId={}", request.getId(), rosterId, ex));
     }
 
     public Mono<Void> deletePlayer(String playerId, String rosterId) {
+        log.info("Rimuovo giocatore id={} da rosterId={}", playerId, rosterId);
         // Rimuove solo l'associazione alla rosa, non l'anagrafica del giocatore.
         return rosterDao.getById(rosterId)
                 .flatMap(roster -> {
                     List<RosterPlayerDto> players = new ArrayList<>(safePlayers(roster));
                     if (!players.removeIf(p -> p.getPlayerId().equals(playerId))) {
+                        log.warn("Giocatore id={} non presente in rosterId={}: nessuna rimozione effettuata", playerId, rosterId);
                         return Mono.empty();
                     }
                     roster.setPlayers(players);
                     return rosterDao.save(roster);
                 })
-                .then();
+                .then()
+                .doOnSuccess(v -> log.info("Giocatore id={} rimosso da rosterId={}", playerId, rosterId))
+                .doOnError(ex -> log.warn("Errore nella rimozione del giocatore id={} da rosterId={}", playerId, rosterId, ex));
     }
 
     private static List<RosterPlayerDto> safePlayers(RosterDto roster) {
@@ -141,8 +159,11 @@ public class RosterService {
         // Il giocatore e' referenziato dalla rosa ma assente dall'anagrafica: incoerenza tra
         // tabelle DynamoDB, non un generico errore interno - va segnalata come tale.
         Mono<PlayerDto> playerMono = playerDao.getById(playerId)
-                .switchIfEmpty(Mono.error(new DataIntegrityException(
-                        "Player " + playerId + " presente in rosa ma non trovato nel registry")));
+                .switchIfEmpty(Mono.defer(() -> {
+                    log.warn("Incoerenza dati: giocatore id={} presente in rosa ma assente dal registry Players", playerId);
+                    return Mono.error(new DataIntegrityException(
+                            "Player " + playerId + " presente in rosa ma non trovato nel registry"));
+                }));
 
         Mono<AvailabilityReportDto> availabilityMono = availabilityReportDao.getById(playerId)
                 .defaultIfEmpty(AvailabilityReportDto.builder()

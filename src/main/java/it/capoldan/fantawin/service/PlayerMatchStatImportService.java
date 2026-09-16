@@ -55,11 +55,15 @@ public class PlayerMatchStatImportService {
     }
 
     public Mono<MatchStatsImportResult> importFromCsv(Flux<Part> fileParts) {
+        log.info("Avvio import CSV delle statistiche di giornata");
         return extractCsvContent(fileParts)
                 .zipWith(playerDao.findAll()
                         .collectList()
                         .map(PlayerMatchStatImportService::buildPlayerLookup))
-                .flatMap(tuple -> parseAndSave(tuple.getT1(), tuple.getT2()));
+                .flatMap(tuple -> parseAndSave(tuple.getT1(), tuple.getT2()))
+                .doOnSuccess(result -> log.info("Import CSV completato: {} righe importate, {} scartate",
+                        result.getImported(), result.getSkipped()))
+                .doOnError(ex -> log.warn("Errore durante l'import del CSV delle statistiche", ex));
     }
 
     private Mono<String> extractCsvContent(Flux<Part> fileParts) {
@@ -67,12 +71,18 @@ public class PlayerMatchStatImportService {
                 .filter(FilePart.class::isInstance)
                 .cast(FilePart.class)
                 .next()
-                .switchIfEmpty(Mono.error(new InvalidImportFileException(
-                        "Nessun file ricevuto nel campo 'file' della richiesta multipart")))
+                .switchIfEmpty(Mono.defer(() -> {
+                    log.warn("Import CSV rifiutato: nessun file nel campo 'file' della richiesta multipart");
+                    return Mono.error(new InvalidImportFileException(
+                            "Nessun file ricevuto nel campo 'file' della richiesta multipart"));
+                }))
                 .flatMap(filePart -> DataBufferUtils.join(filePart.content())
                         .map(PlayerMatchStatImportService::readAndRelease)
-                        .switchIfEmpty(Mono.error(new InvalidImportFileException(
-                                "Il file caricato (" + filePart.filename() + ") e' vuoto"))));
+                        .switchIfEmpty(Mono.defer(() -> {
+                            log.warn("Import CSV rifiutato: il file caricato ({}) e' vuoto", filePart.filename());
+                            return Mono.error(new InvalidImportFileException(
+                                    "Il file caricato (" + filePart.filename() + ") e' vuoto"));
+                        })));
     }
 
     private static String readAndRelease(DataBuffer dataBuffer) {
@@ -101,14 +111,19 @@ public class PlayerMatchStatImportService {
     private Mono<MatchStatsImportResult> parseAndSave(String csvContent, Map<String, String> playerLookup) {
         return Mono.fromCallable(() -> parseRows(csvContent, playerLookup))
                 .subscribeOn(Schedulers.boundedElastic())
-                .flatMap(parsed -> Flux.fromIterable(parsed.dtos())
-                        .flatMap(playerMatchStatDao::save)
-                        .count()
-                        .map(savedCount -> MatchStatsImportResult.builder()
-                                .imported(savedCount.intValue())
-                                .skipped(parsed.errors().size())
-                                .errors(parsed.errors())
-                                .build()));
+                .flatMap(parsed -> {
+                    if (!parsed.errors().isEmpty()) {
+                        log.warn("Import CSV: {} righe scartate per errori di parsing/risoluzione giocatore", parsed.errors().size());
+                    }
+                    return Flux.fromIterable(parsed.dtos())
+                            .flatMap(playerMatchStatDao::save)
+                            .count()
+                            .map(savedCount -> MatchStatsImportResult.builder()
+                                    .imported(savedCount.intValue())
+                                    .skipped(parsed.errors().size())
+                                    .errors(parsed.errors())
+                                    .build());
+                });
     }
 
     private ParsedRows parseRows(String csvContent, Map<String, String> playerLookup) {
@@ -121,8 +136,10 @@ public class PlayerMatchStatImportService {
 
             List<String[]> allRows = reader.readAll();
             if (allRows.isEmpty()) {
+                log.warn("Import CSV rifiutato: il file non contiene nemmeno la riga di intestazione");
                 throw new InvalidImportFileException("Il file CSV non contiene nemmeno la riga di intestazione");
             }
+            log.info("Import CSV: {} righe di dati da elaborare (esclusa intestazione)", allRows.size() - 1);
 
             // riga 1 = intestazione, righe dati numerate a partire da 2 (coerenti con un editor/Excel)
             for (int i = 1; i < allRows.size(); i++) {
@@ -133,10 +150,12 @@ public class PlayerMatchStatImportService {
                 try {
                     dtos.add(parseRow(row, rowNumber, playerLookup));
                 } catch (RowParseException e) {
+                    log.warn("Import CSV: riga {} scartata: {}", rowNumber, e.getMessage());
                     errors.add("riga " + rowNumber + ": " + e.getMessage());
                 }
             }
         } catch (java.io.IOException | com.opencsv.exceptions.CsvException e) {
+            log.warn("Import CSV rifiutato: file non leggibile come CSV", e);
             throw new InvalidImportFileException("File non leggibile come CSV: " + e.getMessage(), e);
         }
 

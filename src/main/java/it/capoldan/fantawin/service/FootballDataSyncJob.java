@@ -54,6 +54,7 @@ public class FootballDataSyncJob {
 
     @Scheduled(cron = "${fantawin.football-data.sync-cron:0 0 6 * * *}") // default: ogni giorno alle 6:00
     public void syncAllTeams() {
+        log.info("Avvio sincronizzazione Football-Data.org (squadre derivate dall'anagrafica giocatori)");
         // Le squadre da sincronizzare sono derivate dall'anagrafica giocatori (realTeam distinti),
         // non da una whitelist statica in football-data.team-ids.*: quella proprieta' richiedeva di
         // scoprire e incollare a mano i teamId (con football-data.team-ids.Inter= vuoto, Spring scarta
@@ -65,6 +66,7 @@ public class FootballDataSyncJob {
                 .filter(Objects::nonNull)
                 .collect(java.util.stream.Collectors.toSet())
                 .flatMap(teamIdResolver::resolveTeamIds)
+                .doOnNext(teamIds -> log.info("Squadre risolte per la sincronizzazione: {}", teamIds.keySet()))
                 .flatMapMany(teamIds -> Flux.fromIterable(teamIds.entrySet()))
                 .concatMap(entry -> syncTeam(entry.getKey(), entry.getValue())
                         // un fallimento su una squadra non deve bloccare le altre
@@ -75,6 +77,7 @@ public class FootballDataSyncJob {
                         // spaziatura anche tra l'ultima chiamata di una squadra e la prima della successiva
                         .delayElement(FOOTBALL_DATA_MIN_CALL_INTERVAL))
                 .blockLast();
+        log.info("Sincronizzazione Football-Data.org completata");
     }
 
     private Mono<FixtureDto> syncTeam(String realTeamName, Integer teamId) {
@@ -127,7 +130,9 @@ public class FootballDataSyncJob {
                     .midweekRoundAfter(midweekAfter)
                     .build();
 
-            return fixtureDao.save(dto);
+            return fixtureDao.save(dto)
+                    .doOnSuccess(saved -> log.info("Fixture sincronizzata per {}: prossimo avversario {} (matchday {})",
+                            realTeamName, opponent, nextSerieA.getMatchday()));
         });
     }
 
