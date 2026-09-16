@@ -5,6 +5,9 @@ info:
 servers:
   - url: https://api.football-data.org/v4
 
+security:
+  - ApiKeyAuth: []
+
 paths:
   /teams/{teamId}/matches:
     get:
@@ -12,6 +15,8 @@ paths:
       tags:
         - FootballData
       operationId: getTeamMatches
+      security:
+        - ApiKeyAuth: []
       parameters:
         - name: teamId
           in: path
@@ -39,6 +44,12 @@ paths:
                 $ref: '#/components/schemas/MatchesResponse'
 
 components:
+  securitySchemes:
+    # Football-Data.org v4 autentica tramite header X-Auth-Token (NON e' un Bearer/OAuth token).
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-Auth-Token
   schemas:
     MatchesResponse:
       type: object

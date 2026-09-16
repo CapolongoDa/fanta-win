@@ -1,12 +1,12 @@
 package it.capoldan.fantawin.middleware.externalclient.footballdata;
 
 import it.capoldan.fantawin.exception.ExternalServiceException;
+import it.capoldan.fantawin.exception.HttpResponseException;
 import it.capoldan.fantawin.generated.openapi.msclient.football_data.api.FootballDataApi;
 import it.capoldan.fantawin.generated.openapi.msclient.football_data.model.MatchesResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.ResourceAccessException;
-import org.springframework.web.client.RestClientResponseException;
 import reactor.core.publisher.Mono;
 import reactor.core.scheduler.Schedulers;
 import reactor.util.retry.Retry;
@@ -37,8 +37,13 @@ public class FootballDataClient {
     }
 
     private static boolean isRetryable(Throwable ex) {
-        if (ex instanceof RestClientResponseException rcre) {
-            int status = rcre.getStatusCode().value();
+        // Il RestTemplate "withTracing" ha un ResponseErrorHandler custom (RestTemplateResponseErrorHandler)
+        // che intercetta ogni 4xx/5xx e rilancia SEMPRE HttpResponseException, non le classiche
+        // HttpClientErrorException/HttpServerErrorException di Spring (RestClientResponseException):
+        // controllare quel tipo qui non avrebbe mai intercettato nulla e i retry su 429/5xx non sarebbero
+        // mai scattati.
+        if (ex instanceof HttpResponseException hre) {
+            int status = hre.getStatusCode();
             return status == 429 || status >= 500;
         }
         // errori di rete/timeout: RestTemplate li incapsula in ResourceAccessException (causa IOException)

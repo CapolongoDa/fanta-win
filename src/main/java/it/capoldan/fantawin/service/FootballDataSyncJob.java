@@ -20,6 +20,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import reactor.util.function.Tuples;
 
 /**
  * Sincronizza periodicamente FixturesTable con i dati reali di Football-Data.org.
@@ -32,6 +33,11 @@ public class FootballDataSyncJob {
 
     private static final String SERIE_A_COMPETITION_CODE = "SA";
     private static final Duration TURNOVER_WINDOW = Duration.ofDays(3);
+
+    // Piano free di Football-Data.org: 10 richieste/minuto (confermato dalla documentazione ufficiale,
+    // https://www.football-data.org/documentation/api). Un margine di sicurezza sopra i 6s teorici
+    // (60s/10) evita di sforare per via di jitter di rete/scheduling.
+    private static final Duration FOOTBALL_DATA_MIN_CALL_INTERVAL = Duration.ofMillis(6500);
 
     // ASSUNZIONE: codici competizioni europee da confermare contro le risposte reali dell'API
     // (il piano free di football-data.org potrebbe non coprire la Conference League).
@@ -53,15 +59,22 @@ public class FootballDataSyncJob {
                             log.error("Sync fallita per squadra={}", entry.getKey(), ex);
                             return Mono.empty();
                         })
-                        .delayElement(Duration.ofMillis(1500))) // rispetta il rate limit del piano free
+                        // spaziatura anche tra l'ultima chiamata di una squadra e la prima della successiva
+                        .delayElement(FOOTBALL_DATA_MIN_CALL_INTERVAL))
                 .blockLast();
     }
 
     private Mono<FixtureDto> syncTeam(String realTeamName, Integer teamId) {
+        // Le due chiamate (FINISHED + SCHEDULED) vengono serializzate con una pausa tra l'una e l'altra:
+        // erano concorrenti (Mono.zip), il che sforava il rate limit del piano free (10 richieste/minuto)
+        // non appena piu' di una squadra veniva sincronizzata nella stessa finestra.
         Mono<MatchesResponse> recentMono = footballDataClient.getTeamMatches(teamId, "FINISHED", 5);
-        Mono<MatchesResponse> upcomingMono = footballDataClient.getTeamMatches(teamId, "SCHEDULED", 5);
 
-        return Mono.zip(recentMono, upcomingMono).flatMap(tuple -> {
+        return recentMono.flatMap(recent ->
+                Mono.delay(FOOTBALL_DATA_MIN_CALL_INTERVAL)
+                        .then(footballDataClient.getTeamMatches(teamId, "SCHEDULED", 5))
+                        .map(upcoming -> Tuples.of(recent, upcoming))
+        ).flatMap(tuple -> {
             List<Match> allMatches = concat(tuple.getT1(), tuple.getT2());
 
             Match nextSerieA = allMatches.stream()

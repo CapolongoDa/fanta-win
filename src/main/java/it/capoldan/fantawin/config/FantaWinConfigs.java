@@ -20,6 +20,10 @@ import java.util.Map;
 public class FantaWinConfigs {
     private Dao dao;
     private String footballDataBaseUrl;
+    // Esclusa dal toString generato da @Data: init() logga "this" all'avvio,
+    // e la api key non deve mai finire in chiaro nei log applicativi.
+    @lombok.ToString.Exclude
+    private String footballDataApiKey;
     private double defaultMatchDifficulty;
     private double bigPlayerThreshold;
     private Map<String, List<Integer>> formations;
