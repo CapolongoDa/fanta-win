@@ -4,7 +4,7 @@ info:
   description: >-
     API REST B2B per la gestione della rosa su DynamoDB e il calcolo predittivo 
     della formazione ottimale di Fantacalcio (FantaClaude).
-  version: 2.4.0
+  version: 2.5.0
   x-api-id: fantaclaude-lineup-manager-api-b2b
   termsOfService: https://fantaclaude.ai/termini-di-servizio
   contact:
@@ -209,6 +209,61 @@ paths:
               schema:
                 $ref: 'problem-internal.yaml#/components/schemas/Problem'
 
+  /fanta-private/matchstats/fixture-lookup/{realTeam}/{matchday}:
+    get:
+      summary: Recupera da Football-Data.org il vero avversario di una squadra per una giornata
+      description: >
+        Interroga in tempo reale Football-Data.org (lo stesso client esterno usato dalla sincronizzazione
+        delle Fixtures) per restituire avversario reale, casa/trasferta, data e stato della partita di
+        una squadra per una specifica giornata di Serie A. Pensato per verificare/prefillare a mano i
+        campi avversario/casa prima di compilare il CSV di /fanta-private/matchstats/import, evitando
+        errori di trascrizione (es. avversario scritto uguale alla squadra stessa).
+      operationId: lookupMatchFixture
+      tags:
+        - MatchStats
+      parameters:
+        - name: realTeam
+          in: path
+          required: true
+          description: Nome della squadra reale, come in anagrafica giocatori
+          schema:
+            type: string
+            example: Inter
+        - name: matchday
+          in: path
+          required: true
+          description: Numero della giornata di Serie A da cercare
+          schema:
+            type: integer
+            example: 4
+      responses:
+        '200':
+          description: Partita trovata
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FixtureLookupResult'
+        '404':
+          description: >-
+            Nessuna partita trovata per questa squadra/giornata, oppure la squadra non e' risolvibile
+            su Football-Data.org
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
+        '503':
+          description: Football-Data.org temporaneamente non raggiungibile
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
+
   /fanta-private/predict/lineup/{rosterId}:
     post:
       summary: Calcola l'undici titolare e la panchina ottimale per la giornata
@@ -283,6 +338,39 @@ components:
           items:
             type: string
           example: ["riga 5: nessun giocatore trovato per 'Mario Rossi' (Empoli)"]
+
+    FixtureLookupResult:
+      type: object
+      required:
+        - realTeam
+        - opponentTeam
+        - home
+        - matchday
+        - status
+      properties:
+        realTeam:
+          type: string
+          description: Squadra reale richiesta
+          example: Inter
+        opponentTeam:
+          type: string
+          description: Vero avversario di realTeam per la giornata richiesta, da Football-Data.org
+          example: Udinese
+        home:
+          type: boolean
+          description: true se realTeam gioca in casa
+          example: true
+        matchday:
+          type: integer
+          example: 4
+        utcDate:
+          type: string
+          description: Data/ora UTC della partita (ISO-8601), cosi' come restituita da Football-Data.org
+          example: "2026-09-14T18:30:00Z"
+        status:
+          type: string
+          description: Stato della partita su Football-Data.org (es. FINISHED, SCHEDULED, TIMED)
+          example: FINISHED
 
     RosterResponse:
       type: object

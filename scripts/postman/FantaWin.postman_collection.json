@@ -1,129 +1,226 @@
 {
-  "info": {
-    "name": "FantaWin API",
-    "description": "Collection locale per fanta-win. Usa i dati seminati da scripts/local/init.sh (rosterId 'as-junior', 25 giocatori della rosa 'AS Junior.'). Imposta {{baseUrl}} in base a server.port di config/application.properties (default in questa collection: 8085).",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
-  },
-  "variable": [
-    { "key": "baseUrl", "value": "http://localhost:8085" },
-    { "key": "rosterId", "value": "as-junior" },
-    { "key": "matchday", "value": "5" },
-    { "key": "playerId", "value": "okoye" }
-  ],
-  "item": [
-    {
-      "name": "Roster",
-      "item": [
-        {
-          "name": "Get Roster",
-          "request": {
-            "method": "GET",
-            "header": [
-              { "key": "Accept", "value": "application/json" }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/fanta-private/getRoster/{{rosterId}}?matchDay={{matchday}}",
-              "host": [ "{{baseUrl}}" ],
-              "path": [ "fanta-private", "getRoster", "{{rosterId}}" ],
-              "query": [
-                { "key": "matchDay", "value": "{{matchday}}" }
-              ]
-            },
-            "description": "Restituisce la rosa raggruppata per ruolo, con FantaRating e dati aggregati per ciascun giocatore alla giornata indicata."
-          }
-        },
-        {
-          "name": "Add or Update Player",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Accept", "value": "application/json" }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/fanta-private/addPlayer/{{rosterId}}",
-              "host": [ "{{baseUrl}}" ],
-              "path": [ "fanta-private", "addPlayer", "{{rosterId}}" ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"id\": \"okoye\",\n  \"name\": \"Okoye\",\n  \"realTeam\": \"Udinese\",\n  \"position\": \"POR\"\n}"
-            },
-            "description": "Aggiunge il giocatore alla rosa o aggiorna il suo slot se gia' presente (stesso id). Rispetta i vincoli sugli slot per ruolo (3 POR / 8 DIF / 8 CEN / 6 ATT)."
-          }
-        },
-        {
-          "name": "Delete Player",
-          "request": {
-            "method": "DELETE",
-            "header": [
-              { "key": "Accept", "value": "application/json" }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/fanta-private/{{playerId}}/{{rosterId}}",
-              "host": [ "{{baseUrl}}" ],
-              "path": [ "fanta-private", "{{playerId}}", "{{rosterId}}" ]
-            },
-            "description": "Rimuove il giocatore dalla rosa (non tocca l'anagrafica in Players)."
-          }
-        }
-      ]
+    "info": {
+        "name": "FantaWin API",
+        "description": "Collection locale per fanta-win. Usa i dati seminati da scripts/local/init.sh (rosterId 'as-junior', 25 giocatori della rosa 'AS Junior.'). Imposta {{baseUrl}} in base a server.port di config/application.properties (default in questa collection: 8085).",
+        "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
-    {
-      "name": "Match Stats",
-      "item": [
+    "variable": [
         {
-          "name": "Import Match Stats (CSV)",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Accept", "value": "application/json" }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/fanta-private/matchstats/import",
-              "host": [ "{{baseUrl}}" ],
-              "path": [ "fanta-private", "matchstats", "import" ]
-            },
-            "body": {
-              "mode": "formdata",
-              "formdata": [
+            "key": "baseUrl",
+            "value": "http://localhost:8085"
+        },
+        {
+            "key": "rosterId",
+            "value": "as-junior"
+        },
+        {
+            "key": "matchday",
+            "value": "5"
+        },
+        {
+            "key": "playerId",
+            "value": "okoye"
+        },
+        {
+            "key": "realTeam",
+            "value": "Inter"
+        }
+    ],
+    "item": [
+        {
+            "name": "Roster",
+            "item": [
                 {
-                  "key": "file",
-                  "type": "file",
-                  "src": [],
-                  "description": "CSV separato da ';', UTF-8, intestazione: giocatore;squadra;giornata;stagione;avversario;casa;voto;fantavoto;gol;assist;ammonizioni;espulsioni;xg;xa (solo giocatore, squadra e giornata obbligatori). Seleziona qui il file dal tuo computer prima di inviare."
+                    "name": "Get Roster",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/fanta-private/getRoster/{{rosterId}}?matchDay={{matchday}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "fanta-private",
+                                "getRoster",
+                                "{{rosterId}}"
+                            ],
+                            "query": [
+                                {
+                                    "key": "matchDay",
+                                    "value": "{{matchday}}"
+                                }
+                            ]
+                        },
+                        "description": "Restituisce la rosa raggruppata per ruolo, con FantaRating e dati aggregati per ciascun giocatore alla giornata indicata."
+                    }
+                },
+                {
+                    "name": "Add or Update Player",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/fanta-private/addPlayer/{{rosterId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "fanta-private",
+                                "addPlayer",
+                                "{{rosterId}}"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"id\": \"okoye\",\n  \"name\": \"Okoye\",\n  \"realTeam\": \"Udinese\",\n  \"position\": \"POR\"\n}"
+                        },
+                        "description": "Aggiunge il giocatore alla rosa o aggiorna il suo slot se gia' presente (stesso id). Rispetta i vincoli sugli slot per ruolo (3 POR / 8 DIF / 8 CEN / 6 ATT)."
+                    }
+                },
+                {
+                    "name": "Delete Player",
+                    "request": {
+                        "method": "DELETE",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/fanta-private/{{playerId}}/{{rosterId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "fanta-private",
+                                "{{playerId}}",
+                                "{{rosterId}}"
+                            ]
+                        },
+                        "description": "Rimuove il giocatore dalla rosa (non tocca l'anagrafica in Players)."
+                    }
                 }
-              ]
-            },
-            "description": "Importa voti/fantavoto/xg/xa da un file CSV preparato manualmente. Righe con giocatore non trovato in anagrafica non bloccano l'import, finiscono in 'errors' nella risposta."
-          }
-        }
-      ]
-    },
-    {
-      "name": "Prediction",
-      "item": [
+            ]
+        },
         {
-          "name": "Calculate Optimal Lineup",
-          "request": {
-            "method": "POST",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" },
-              { "key": "Accept", "value": "application/json" }
-            ],
-            "url": {
-              "raw": "{{baseUrl}}/fanta-private/predict/lineup/{{rosterId}}",
-              "host": [ "{{baseUrl}}" ],
-              "path": [ "fanta-private", "predict", "lineup", "{{rosterId}}" ]
-            },
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"matchday\": {{matchday}},\n  \"modifierActive\": true,\n  \"teamsWithMidweekMatches\": []\n}"
-            },
-            "description": "Calcola il modulo vincente (simula 3-4-3/4-3-3/3-5-2/4-4-2), gli 11 titolari con FantaRating e la panchina ordinata. Richiede che Fixtures sia gia' popolata per la giornata richiesta (vedi FootballDataSyncJob) e che i giocatori infortunati/squalificati abbiano un AvailabilityReport coerente, altrimenti risultano OK/100% di default."
-          }
+            "name": "Match Stats",
+            "item": [
+                {
+                    "name": "Import Match Stats (CSV)",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/fanta-private/matchstats/import",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "fanta-private",
+                                "matchstats",
+                                "import"
+                            ]
+                        },
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "file",
+                                    "type": "file",
+                                    "src": [],
+                                    "description": "CSV separato da ';', UTF-8, intestazione: giocatore;squadra;giornata;stagione;avversario;casa;voto;fantavoto;gol;assist;ammonizioni;espulsioni;xg;xa (solo giocatore, squadra e giornata obbligatori). Seleziona qui il file dal tuo computer prima di inviare."
+                                }
+                            ]
+                        },
+                        "description": "Importa voti/fantavoto/xg/xa da un file CSV preparato manualmente. Righe con giocatore non trovato in anagrafica non bloccano l'import, finiscono in 'errors' nella risposta."
+                    }
+                },
+                {
+                    "name": "Lookup Match Fixture",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/fanta-private/matchstats/fixture-lookup/{{realTeam}}/{{matchday}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "fanta-private",
+                                "matchstats",
+                                "fixture-lookup",
+                                "{{realTeam}}",
+                                "{{matchday}}"
+                            ]
+                        },
+                        "description": "Interroga Football-Data.org (stesso client esterno della sync Fixtures) per il vero avversario/casa-trasferta/data di realTeam alla giornata indicata: utile per verificare/prefillare a mano il CSV di import prima di compilarlo."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Prediction",
+            "item": [
+                {
+                    "name": "Calculate Optimal Lineup",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{baseUrl}}/fanta-private/predict/lineup/{{rosterId}}",
+                            "host": [
+                                "{{baseUrl}}"
+                            ],
+                            "path": [
+                                "fanta-private",
+                                "predict",
+                                "lineup",
+                                "{{rosterId}}"
+                            ]
+                        },
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"matchday\": {{matchday}},\n  \"modifierActive\": true,\n  \"teamsWithMidweekMatches\": []\n}"
+                        },
+                        "description": "Calcola il modulo vincente (simula 3-4-3/4-3-3/3-5-2/4-4-2), gli 11 titolari con FantaRating e la panchina ordinata. Richiede che Fixtures sia gia' popolata per la giornata richiesta (vedi FootballDataSyncJob) e che i giocatori infortunati/squalificati abbiano un AvailabilityReport coerente, altrimenti risultano OK/100% di default."
+                    }
+                }
+            ]
         }
-      ]
-    }
-  ]
+    ]
 }

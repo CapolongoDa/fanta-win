@@ -2,6 +2,7 @@ package it.capoldan.fantawin.controller;
 
 import it.capoldan.fantawin.generated.openapi.server.v1.dto.LineupRequest;
 import it.capoldan.fantawin.service.LineupPredictionService;
+import it.capoldan.fantawin.utils.LineupFormationLogger;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -29,6 +30,7 @@ public class PredictionController {
                                                                  @Valid @RequestBody Mono<LineupRequest> lineupRequest) {
         log.info("Richiesta POST /fanta-private/predict/lineup/{} ricevuta", rosterId);
         return lineupRequest.flatMap(req -> lineupPredictionService.calculateOptimalLineup(req, rosterId))
+                .doOnNext(LineupFormationLogger::logFormation)
                 .map(response -> ResponseEntity.<Object>ok(response))
                 .doOnError(ex -> log.warn("Richiesta di calcolo formazione fallita per rosterId={}", rosterId, ex));
     }
