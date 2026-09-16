@@ -1,11 +1,12 @@
 package it.capoldan.fantawin.service;
 
 import it.capoldan.fantawin.config.FantaWinConfigs;
-import it.capoldan.fantawin.config.FootballDataTeamsConfig;
 import it.capoldan.fantawin.dto.FixtureDto;
+import it.capoldan.fantawin.dto.PlayerDto;
 import it.capoldan.fantawin.generated.openapi.msclient.football_data.model.Match;
 import it.capoldan.fantawin.generated.openapi.msclient.football_data.model.MatchesResponse;
 import it.capoldan.fantawin.middleware.dao.dynamo.FixtureDao;
+import it.capoldan.fantawin.middleware.dao.dynamo.PlayerDao;
 import it.capoldan.fantawin.middleware.externalclient.footballdata.FootballDataClient;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,7 +45,8 @@ public class FootballDataSyncJob {
     private static final Set<String> EUROPEAN_COMPETITION_CODES = Set.of("CL", "EL", "UECL");
 
     private final FootballDataClient footballDataClient;
-    private final FootballDataTeamsConfig teamsConfig;
+    private final FootballDataTeamIdResolver teamIdResolver;
+    private final PlayerDao playerDao;
     private final FixtureDao fixtureDao;
 
     private final FantaWinConfigs fantaWinConfigs;
@@ -52,7 +54,18 @@ public class FootballDataSyncJob {
 
     @Scheduled(cron = "${fantawin.football-data.sync-cron:0 0 6 * * *}") // default: ogni giorno alle 6:00
     public void syncAllTeams() {
-        Flux.fromIterable(teamsConfig.getTeamIds().entrySet())
+        // Le squadre da sincronizzare sono derivate dall'anagrafica giocatori (realTeam distinti),
+        // non da una whitelist statica in football-data.team-ids.*: quella proprieta' richiedeva di
+        // scoprire e incollare a mano i teamId (con football-data.team-ids.Inter= vuoto, Spring scarta
+        // la entry dal binding, quindi la mappa risultava vuota e la sync non faceva letteralmente
+        // nulla, senza errori). I teamId vengono risolti per nome via teamIdResolver, con
+        // football-data.team-ids.* utilizzabile come override manuale per singola squadra.
+        playerDao.findAll()
+                .map(PlayerDto::getRealTeam)
+                .filter(Objects::nonNull)
+                .collect(java.util.stream.Collectors.toSet())
+                .flatMap(teamIdResolver::resolveTeamIds)
+                .flatMapMany(teamIds -> Flux.fromIterable(teamIds.entrySet()))
                 .concatMap(entry -> syncTeam(entry.getKey(), entry.getValue())
                         // un fallimento su una squadra non deve bloccare le altre
                         .onErrorResume(ex -> {

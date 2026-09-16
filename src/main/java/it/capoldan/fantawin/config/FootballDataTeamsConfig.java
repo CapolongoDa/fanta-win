@@ -11,12 +11,18 @@ import java.util.HashMap;
 import java.util.Map;
 
 /**
- * Mappatura nome squadra reale (come salvato in PlayerEntity.realTeam / FixtureEntity.realTeam)
- * -> teamId numerico di Football-Data.org.
+ * Override manuali opzionali nome squadra reale (come salvato in PlayerEntity.realTeam /
+ * FixtureEntity.realTeam) -> teamId numerico di Football-Data.org.
  *
- * I valori vanno popolati verificando GET /competitions/SA/teams con il proprio token:
- * NON usare ID a memoria/indovinati, un ID sbagliato fa leggere i dati di un'altra squadra
- * senza generare alcun errore visibile.
+ * FootballDataSyncJob non dipende piu' da questa lista per sapere quali squadre sincronizzare
+ * (le deriva dall'anagrafica giocatori): i teamId vengono risolti automaticamente per nome via
+ * FootballDataTeamIdResolver (GET /competitions/SA/teams). Una entry qui serve solo come
+ * override per una squadra il cui nome in anagrafica non corrisponde a nessun nome/shortName/tla
+ * restituito da Football-Data.org.
+ *
+ * NON valorizzare un id a memoria/indovinato: un ID sbagliato fa leggere i dati di un'altra
+ * squadra senza generare alcun errore visibile. Verifica sempre il valore chiamando
+ * GET /competitions/SA/teams con il proprio token prima di incollarlo qui.
  */
 @Configuration
 @ConfigurationProperties(prefix = "football-data")

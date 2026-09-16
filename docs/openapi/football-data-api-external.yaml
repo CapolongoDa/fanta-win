@@ -43,6 +43,34 @@ paths:
               schema:
                 $ref: '#/components/schemas/MatchesResponse'
 
+  /competitions/{code}/teams:
+    get:
+      summary: Elenco delle squadre partecipanti a una competizione
+      description: >
+        Usata per risolvere in automatico i teamId numerici delle squadre configurate in
+        FootballDataTeamsConfig (nome -> id), invece di doverli scoprire e incollare a mano:
+        un id sbagliato inserito manualmente farebbe leggere silenziosamente i dati di
+        un'altra squadra, senza alcun errore visibile.
+      tags:
+        - FootballData
+      operationId: getCompetitionTeams
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: code
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "SA"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamsResponse'
+
 components:
   securitySchemes:
     # Football-Data.org v4 autentica tramite header X-Auth-Token (NON e' un Bearer/OAuth token).
@@ -96,3 +124,24 @@ components:
           type: integer
         name:
           type: string
+
+    TeamsResponse:
+      type: object
+      properties:
+        teams:
+          type: array
+          items:
+            $ref: '#/components/schemas/CompetitionTeam'
+
+    CompetitionTeam:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        shortName:
+          type: string
+        tla:
+          type: string
+          description: Sigla a 3 lettere della squadra (es. INT, MIL, JUV, NAP)
