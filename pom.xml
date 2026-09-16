@@ -148,6 +148,13 @@
             <artifactId>jackson-dataformat-yaml</artifactId>
         </dependency>
 
+        <!-- CSV parsing (import statistiche giornata) -->
+        <dependency>
+            <groupId>com.opencsv</groupId>
+            <artifactId>opencsv</artifactId>
+            <version>5.7.1</version>
+        </dependency>
+
         <!-- Logging -->
         <dependency>
             <groupId>net.logstash.logback</groupId>

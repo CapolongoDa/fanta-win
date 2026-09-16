@@ -21,6 +21,8 @@ tags:
     description: Gestione dei calciatori all'interno della rosa dell'utente su DynamoDB
   - name: Prediction
     description: Calcolo predittivo dell'undici titolare, della panchina e del modulo ideale
+  - name: MatchStats
+    description: Import delle statistiche di giornata (voto/bonus/malus) dei calciatori
 
 paths:
   /fanta-private/getRoster/{rosterId}:
@@ -130,6 +132,51 @@ paths:
               schema:
                 $ref: 'problem-internal.yaml#/components/schemas/Problem'
 
+  /fanta-private/matchstats/import:
+    post:
+      summary: Importa le statistiche di una giornata da file CSV
+      description: >
+        Carica un file CSV con voto/fantavoto/bonus/malus dei calciatori per una giornata gia' disputata
+        (fonte: sito voti fantacalcio, compilazione manuale). Formato atteso, separatore ';', UTF-8, intestazione
+        su prima riga: giocatore;squadra;giornata;stagione;avversario;casa;voto;fantavoto;gol;assist;ammonizioni;espulsioni;xg;xa.
+        Il giocatore viene risolto per nome+squadra reale contro l'anagrafica; le righe non risolvibili
+        non bloccano l'import ma vengono riportate in errors.
+      operationId: importMatchStats
+      tags:
+        - MatchStats
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: File CSV con le statistiche della giornata
+      responses:
+        '200':
+          description: Import completato (anche parzialmente, vedi errors)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MatchStatsImportResult'
+        '400':
+          description: File assente o non leggibile come CSV
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
+
   /fanta-private/predict/lineup/{rosterId}:
     post:
       summary: Calcola l'undici titolare e la panchina ottimale per la giornata
@@ -169,6 +216,28 @@ paths:
 
 components:
   schemas:
+    MatchStatsImportResult:
+      type: object
+      required:
+        - imported
+        - skipped
+        - errors
+      properties:
+        imported:
+          type: integer
+          description: Numero di righe importate/aggiornate con successo
+          example: 22
+        skipped:
+          type: integer
+          description: Numero di righe scartate (giocatore non risolto o riga non valida)
+          example: 1
+        errors:
+          type: array
+          description: Dettaglio delle righe scartate, con numero di riga e motivo
+          items:
+            type: string
+          example: ["riga 5: nessun giocatore trovato per 'Mario Rossi' (Empoli)"]
+
     RosterResponse:
       type: object
       required:

@@ -24,5 +24,7 @@ public class ExceptionsCodes {
     public static final String ERROR_CODE_EXTERNAL_SERVICE_ERROR = "EXTERNAL_SERVICE_ERROR";
     /** Dipendenza esterna (DynamoDB/LocalStack, servizio esterno a livello di trasporto) non raggiungibile. */
     public static final String ERROR_CODE_SERVICE_UNAVAILABLE = "SERVICE_UNAVAILABLE";
+    /** File caricato per l'import (es. statistiche di giornata) assente, vuoto o non leggibile come CSV. */
+    public static final String ERROR_CODE_INVALID_IMPORT_FILE = "INVALID_IMPORT_FILE";
 }
 
