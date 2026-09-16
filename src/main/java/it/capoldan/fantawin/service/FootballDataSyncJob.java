@@ -13,14 +13,13 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
-
 import java.time.Duration;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
-import java.util.function.Predicate;
 
 /**
  * Sincronizza periodicamente FixturesTable con i dati reali di Football-Data.org.
@@ -76,16 +75,16 @@ public class FootballDataSyncJob {
                 return Mono.empty();
             }
 
-            boolean home = teamId.equals(Objects.requireNonNull(nextSerieA.getHomeTeam()).getId());
+            boolean home = Objects.equals(Objects.requireNonNull(nextSerieA.getHomeTeam()).getId(), teamId);
             String opponent = home ? Objects.requireNonNull(nextSerieA.getAwayTeam()).getName() : nextSerieA.getHomeTeam().getName();
             Instant referenceDate = nextSerieA.getUtcDate();
 
-            boolean europeanBefore = hasMatchInWindow(allMatches, referenceDate, true, EUROPEAN_COMPETITION_CODES::contains);
-            boolean europeanAfter = hasMatchInWindow(allMatches, referenceDate, false, EUROPEAN_COMPETITION_CODES::contains);
+            boolean europeanBefore = hasMatchInWindow(allMatches, OffsetDateTime.from(referenceDate), true, EUROPEAN_COMPETITION_CODES::contains);
+            boolean europeanAfter = hasMatchInWindow(allMatches, OffsetDateTime.from(referenceDate), false, EUROPEAN_COMPETITION_CODES::contains);
             // "turno infrasettimanale" = qualsiasi altra partita (non quella di Serie A di riferimento)
             // nella finestra, indipendentemente dalla competizione - vedi nota sotto.
-            boolean midweekBefore = hasMatchInWindow(allMatches, referenceDate, true, code -> true);
-            boolean midweekAfter = hasMatchInWindow(allMatches, referenceDate, false, code -> true);
+            boolean midweekBefore = hasMatchInWindow(allMatches, OffsetDateTime.from(referenceDate), true, code -> true);
+            boolean midweekAfter = hasMatchInWindow(allMatches, OffsetDateTime.from(referenceDate), false, code -> true);
 
             FixtureDto dto = FixtureDto.builder()
                     .matchDay(nextSerieA.getMatchday())
@@ -106,13 +105,13 @@ public class FootballDataSyncJob {
         });
     }
 
-    private boolean hasMatchInWindow(List<Match> matches, Instant reference,
-                                     boolean before, Predicate<String> competitionFilter) {
+    private boolean hasMatchInWindow(List<Match> matches, OffsetDateTime reference,
+                                     boolean before, java.util.function.Predicate<String> competitionFilter) {
         return matches.stream().anyMatch(m -> {
             if (Objects.requireNonNull(m.getUtcDate()).equals(reference)) return false; // esclude la partita di riferimento stessa
             boolean inWindow = before
-                    ? m.getUtcDate().isBefore(reference) && Duration.between(m.getUtcDate(), reference).compareTo(TURNOVER_WINDOW) <= 0
-                    : m.getUtcDate().isAfter(reference) && Duration.between(reference, m.getUtcDate()).compareTo(TURNOVER_WINDOW) <= 0;
+                    ? m.getUtcDate().isBefore(reference.toInstant()) && Duration.between(m.getUtcDate(), reference).compareTo(TURNOVER_WINDOW) <= 0
+                    : m.getUtcDate().isAfter(reference.toInstant()) && Duration.between(reference, m.getUtcDate()).compareTo(TURNOVER_WINDOW) <= 0;
             return inWindow && competitionFilter.test(Objects.requireNonNull(m.getCompetition()).getCode());
         });
     }

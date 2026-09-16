@@ -26,6 +26,7 @@ Parameters:
 
 Resources:
   # Tabella DynamoDB della rosa (single-table: PK USER#..., SK PLAYER#...)
+  # Tabella DynamoDB della rosa (1 item per rosa: PK rosterId, con lista giocatori embedded)
   RosterTable:
     Type: AWS::DynamoDB::Table
     UpdateReplacePolicy: Retain
@@ -34,15 +35,11 @@ Resources:
       TableName: !Sub '${ProjectName}-Roster'
       BillingMode: PAY_PER_REQUEST
       AttributeDefinitions:
-        - AttributeName: pk
-          AttributeType: S
-        - AttributeName: sk
+        - AttributeName: rosterId
           AttributeType: S
       KeySchema:
-        - AttributeName: pk
+        - AttributeName: rosterId
           KeyType: HASH
-        - AttributeName: sk
-          KeyType: RANGE
       PointInTimeRecoverySpecification:
         PointInTimeRecoveryEnabled: true
 

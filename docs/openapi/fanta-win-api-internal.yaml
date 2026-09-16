@@ -23,13 +23,27 @@ tags:
     description: Calcolo predittivo dell'undici titolare, della panchina e del modulo ideale
 
 paths:
-  /roster:
+  /fanta-private/getRoster/{rosterId}:
     get:
       summary: Recupera la rosa completa dell'utente
       description: Restituisce l'elenco di tutti i calciatori divisi per ruolo presenti in rosa.
       operationId: getRoster
       tags:
         - Roster
+      parameters:
+        - name: rosterId
+          in: path
+          required: true
+          description: id della squadra del fantacalcio
+          schema:
+            type: string
+            example: junior
+        - name: matchDay
+          in: path
+          required: true
+          description: id della squadra del fantacalcio
+          schema:
+            type: integer
       responses:
         '200':
           description: Success
@@ -49,13 +63,21 @@ paths:
             application/json:
               schema:
                 $ref: 'problem-internal.yaml#/components/schemas/Problem'
-
+  /fanta-private/addPlayer/{rosterId}:
     post:
       summary: Aggiunge o aggiorna un giocatore nella rosa
       description: Inserisce un nuovo calciatore o ne aggiorna le statistiche e lo stato corrente.
       operationId: addOrUpdatePlayer
       tags:
         - Roster
+      parameters:
+        - name: rosterId
+          in: path
+          required: true
+          description: id della squadra del fantacalcio
+          schema:
+            type: string
+            example: junior
       requestBody:
         required: true
         content:
@@ -76,7 +98,7 @@ paths:
               schema:
                 $ref: 'problem-internal.yaml#/components/schemas/Problem'
 
-  /roster/{playerId}:
+  /fanta-private/{playerId}/{rosterId}:
     delete:
       summary: Rimuove un giocatore dalla rosa
       description: Elimina un calciatore specifico dalla tabella DynamoDB tramite il suo identificativo.
@@ -91,6 +113,13 @@ paths:
           schema:
             type: string
             example: PLAYER#inter_lautaro
+        - name: rosterId
+          in: path
+          required: true
+          description: id della squadra del fantacalcio
+          schema:
+            type: string
+            example: junior
       responses:
         '204':
           description: Giocatore rimosso con successo
@@ -101,7 +130,7 @@ paths:
               schema:
                 $ref: 'problem-internal.yaml#/components/schemas/Problem'
 
-  /predict/lineup:
+  /fanta-private/predict/lineup/{rosterId}:
     post:
       summary: Calcola l'undici titolare e la panchina ottimale per la giornata
       description: >
@@ -110,6 +139,14 @@ paths:
       operationId: calculateOptimalLineup
       tags:
         - Prediction
+      parameters:
+        - name: rosterId
+          in: path
+          required: true
+          description: id della squadra del fantacalcio
+          schema:
+            type: string
+            example: junior
       requestBody:
         required: true
         content:
@@ -135,11 +172,16 @@ components:
     RosterResponse:
       type: object
       required:
+        - teamName
         - goalkeepers
         - defenders
         - midfielders
         - forwards
       properties:
+        teamName:
+          type: string
+          description: Nome della squadra fantacalcistica dell'utente
+          example: Junior FC
         goalkeepers:
           type: array
           items:

@@ -8,6 +8,9 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.validation.annotation.Validated;
 
+import java.util.List;
+import java.util.Map;
+
 @Configuration
 @ConfigurationProperties( prefix = "fantawin")
 @Validated
@@ -19,6 +22,7 @@ public class FantaWinConfigs {
     private String footballDataBaseUrl;
     private double defaultMatchDifficulty;
     private double bigPlayerThreshold;
+    private Map<String, List<Integer>> formations;
 
     @Data
     public static class Dao {

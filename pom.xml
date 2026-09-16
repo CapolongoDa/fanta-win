@@ -235,7 +235,7 @@
                             <configOptions>
                                 <useSpringBoot3>true</useSpringBoot3>
                                 <dateLibrary>java8</dateLibrary>
-                                <delegatePattern>true</delegatePattern>
+                                <delegatePattern>false</delegatePattern>
                                 <interfaceOnly>true</interfaceOnly>
                                 <reactive>true</reactive>
                                 <documentationProvider>source</documentationProvider>

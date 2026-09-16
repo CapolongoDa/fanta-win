@@ -12,6 +12,6 @@ public class ExceptionsCodes {
     public static final String ERROR_CODE_TOO_MANY_REQUESTS = "GENERIC_TOO_MANY_REQUESTS";
     public static final String ERROR_CODE_GENERIC_INVALIDPARAMETER_DUPLICATED = "GENERIC_INVALIDPARAMETER_DUPLICATED";
     public static final String ERROR_CODE_GENERIC_INVALIDPARAMETER = "GENERIC_INVALIDPARAMETER";
-
+    public static final String ERROR_CODE_NOT_FOUND = "GENERIC_NOT_FOUND";
 }
 

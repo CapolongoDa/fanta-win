@@ -7,13 +7,22 @@ import reactor.core.publisher.Mono;
 
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
+import java.util.function.Function;
 
 @Service
 public class PlayerFormAggregationService {
 
     private static final int RECENT_MATCHES_WINDOW = 5;
 
-    public record FormComponents(double recentFormScore, double historicalVsOpponentScore, double xgXaScore) {}
+    /** recentMatches e' esposto qui (non ricalcolato altrove) per evitare interrogazioni
+     * duplicate a PlayerMatchStatsTable: serve sia a Player.recentScores nell'output API
+     * sia al calcolo del Modificatore di Difesa (voto puro), senza chiamate bloccanti extra. */
+    public record FormComponents(double recentFormScore,
+                                 double historicalVsOpponentScore,
+                                 double xgXaScore,
+                                 double recentPureVoteAverage,
+                                 List<PlayerMatchStatDto> recentMatches) {}
 
     private final PlayerMatchStatDao playerMatchStatDao;
 
@@ -25,10 +34,12 @@ public class PlayerFormAggregationService {
         return playerMatchStatDao.findByPlayer(playerId)
                 .collectList()
                 .map(history -> {
-                    double recentForm = averageFantavoto(recentMatches(history));
+                    List<PlayerMatchStatDto> recent = recentMatches(history);
+                    double recentForm = average(recent, PlayerMatchStatDto::getFantavoto);
                     double historical = historicalVsOpponent(history, opponentRealTeam, recentForm);
-                    double xgXa = xgXaComponent(recentMatches(history));
-                    return new FormComponents(recentForm, historical, xgXa);
+                    double xgXa = xgXaComponent(recent);
+                    double pureVote = average(recent, PlayerMatchStatDto::getVoto);
+                    return new FormComponents(recentForm, historical, xgXa, pureVote, recent);
                 });
     }
 
@@ -39,10 +50,11 @@ public class PlayerFormAggregationService {
                 .toList();
     }
 
-    private double averageFantavoto(List<PlayerMatchStatDto> matches) {
+    private double average(List<PlayerMatchStatDto> matches, Function<PlayerMatchStatDto, Double> extractor) {
         return matches.stream()
-                .filter(m -> m.getFantavoto() != null)
-                .mapToDouble(PlayerMatchStatDto::getFantavoto)
+                .map(extractor)
+                .filter(Objects::nonNull)
+                .mapToDouble(Double::doubleValue)
                 .average()
                 .orElse(0.0);
     }
@@ -52,19 +64,13 @@ public class PlayerFormAggregationService {
         List<PlayerMatchStatDto> vsOpponent = history.stream()
                 .filter(m -> opponentRealTeam.equalsIgnoreCase(m.getOpponentTeam()))
                 .toList();
-        // fallback sulla forma recente se non c'e' storico specifico contro l'avversario
-        return vsOpponent.isEmpty() ? fallback : averageFantavoto(vsOpponent);
+        return vsOpponent.isEmpty() ? fallback : average(vsOpponent, PlayerMatchStatDto::getFantavoto);
     }
 
-    /**
-     * ASSUNZIONE/EURISTICA da calibrare: xG/xA grezzi (tipicamente 0.0-1.0 a partita)
-     * vengono scalati su base 0-10 sommando i due valori medi e applicando un fattore.
-     * Il README chiede solo "premia xG/xA alti anche senza gol, penalizza contro difese chiuse":
-     * qui do un'implementazione plausibile ma è un parametro da tarare con dati reali.
-     */
+    /** ASSUNZIONE/EURISTICA da calibrare: fattore di scala arbitrario su xG+xA medi. */
     private double xgXaComponent(List<PlayerMatchStatDto> recent) {
-        double avgXg = recent.stream().filter(m -> m.getXg() != null).mapToDouble(PlayerMatchStatDto::getXg).average().orElse(0.0);
-        double avgXa = recent.stream().filter(m -> m.getXa() != null).mapToDouble(PlayerMatchStatDto::getXa).average().orElse(0.0);
+        double avgXg = average(recent, PlayerMatchStatDto::getXg);
+        double avgXa = average(recent, PlayerMatchStatDto::getXa);
         double scaleFactor = 10.0; // TODO: calibrare
         return Math.min(10.0, (avgXg + avgXa) * scaleFactor);
     }

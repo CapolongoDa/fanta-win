@@ -3,9 +3,10 @@ package it.capoldan.fantawin.exception.mapper;
 import it.capoldan.fantawin.exception.ValidationException;
 import it.capoldan.fantawin.exception.config.ExceptionHelper;
 import it.capoldan.fantawin.generated.openapi.server.v1.dto.ProblemError;
+import jakarta.validation.ConstraintViolation;
 import org.springframework.util.CollectionUtils;
 import org.springframework.validation.FieldError;
-import jakarta.validation.ConstraintViolation;
+
 import java.util.List;
 import java.util.Set;
 

@@ -65,13 +65,13 @@ public class DynamoDbTablesConfig {
     }
 
     @Bean
-    public DynamoDbAsyncTable<RosterEntryEntity> rosterEntryTable(
+    public DynamoDbAsyncTable<RosterEntity> rosterTable(
             DynamoDbEnhancedAsyncClient client,
             FantaWinConfigs props) {
 
         return client.table(
                 props.getDao().getRosterTableName(),
-                TableSchema.fromBean(RosterEntryEntity.class)
+                TableSchema.fromBean(RosterEntity.class)
         );
     }
 }

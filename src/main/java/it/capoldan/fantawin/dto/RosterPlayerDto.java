@@ -9,9 +9,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class RosterEntryDto {
-
-    private String rosterId;
+public class RosterPlayerDto {
 
     private String playerId;
 
