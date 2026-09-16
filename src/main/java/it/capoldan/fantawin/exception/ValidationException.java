@@ -1,13 +1,9 @@
 package it.capoldan.fantawin.exception;
 
-import it.capoldan.fantawin.exception.config.ExceptionHelper;
-
 import it.capoldan.fantawin.generated.openapi.server.v1.dto.ProblemError;
-import jakarta.validation.ConstraintViolation;
 import org.springframework.http.HttpStatus;
 import java.util.List;
-import java.util.Optional;
-import java.util.Set;
+
 
 /**
  * Eccezione di validazione di base, viene tradotta con un errore 400
@@ -15,25 +11,6 @@ import java.util.Set;
  * i problem relativi ai problemi di validazione.
  */
 public class ValidationException extends RuntimeException {
-
-
-    /**
-     * @deprecated
-     * Costruttore deprecato, inserito per retro compatibilità
-     * Usare il builder o estendere la classe utilizzando i costruttori che prevedono i ProblemError
-     *
-     * @param validationTargetId non usato
-     * @param validationErrors errori di validazione
-     * @param <T> tipo errori validazione
-     */
-    @Deprecated(since = "0.0.2")
-    public <T> ValidationException(String validationTargetId, Set<? extends ConstraintViolation<?>> validationErrors) {
-        this("Some parameters are invalid", new ExceptionHelper(Optional.empty()).generateProblemErrorsFromConstraintViolation(validationErrors), null  );
-    }
-
-    protected ValidationException(String message, List<ProblemError> problemErrorList) {
-        this( message,  problemErrorList, null  );
-    }
 
     public ValidationException(String message, List<ProblemError> problemErrorList, Throwable cause) {
         super( HttpStatus.BAD_REQUEST.getReasonPhrase(), message, HttpStatus.BAD_REQUEST.value(), problemErrorList, cause  );

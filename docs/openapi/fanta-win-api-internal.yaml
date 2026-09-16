@@ -39,9 +39,9 @@ paths:
             type: string
             example: junior
         - name: matchDay
-          in: path
+          in: query
           required: true
-          description: id della squadra del fantacalcio
+          description: giornata di campionato per cui calcolare il rating dei giocatori
           schema:
             type: integer
       responses:

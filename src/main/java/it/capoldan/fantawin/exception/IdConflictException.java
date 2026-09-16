@@ -1,7 +1,5 @@
 package it.capoldan.fantawin.exception;
 
-
-
 import it.capoldan.fantawin.generated.openapi.server.v1.dto.ProblemError;
 
 import java.util.Map;
