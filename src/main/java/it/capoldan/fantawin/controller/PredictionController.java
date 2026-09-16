@@ -11,11 +11,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
 
-/**
- * Non implementa piu' l'interfaccia generata PredictionApi: vedi il commento su RosterController
- * per il motivo (Mono&lt;ResponseEntity&lt;Object&gt;&gt; invece del tipo puntuale generato) e il
- * relativo trade-off (nessun controllo automatico di conformita' allo spec a compile time).
- */
+
 @RestController
 @Validated
 public class PredictionController {
@@ -30,6 +26,6 @@ public class PredictionController {
     public Mono<ResponseEntity<Object>> calculateOptimalLineup(@PathVariable("rosterId") String rosterId,
                                                                  @Valid @RequestBody Mono<LineupRequest> lineupRequest) {
         return lineupRequest.flatMap(req -> lineupPredictionService.calculateOptimalLineup(req, rosterId))
-                .map(response -> ResponseEntity.<Object>ok(response));
+                .map(ResponseEntity::ok);
     }
 }

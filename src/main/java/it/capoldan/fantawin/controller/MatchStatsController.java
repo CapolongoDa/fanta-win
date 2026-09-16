@@ -9,11 +9,6 @@ import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-/**
- * Non implementa piu' l'interfaccia generata MatchStatsApi: vedi il commento su RosterController
- * per il motivo (Mono&lt;ResponseEntity&lt;Object&gt;&gt; invece del tipo puntuale generato) e il
- * relativo trade-off (nessun controllo automatico di conformita' allo spec a compile time).
- */
 @RestController
 public class MatchStatsController {
 
