@@ -5,7 +5,8 @@
             "commonFiles": [],
             "openapiFiles": [
                 "fanta-win-api-internal.yaml",
-                "problem-internal.yaml"
+                "problem-internal.yaml",
+                "lineup-shared-internal.yaml"
             ],
             "servicePath": "fanta-win",
             "generateBundle": true,

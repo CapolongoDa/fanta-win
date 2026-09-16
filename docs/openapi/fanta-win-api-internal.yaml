@@ -208,7 +208,6 @@ components:
       required:
         - matchday
         - modifierActive
-        - teamsWithMidweekMatches
       properties:
         matchday:
           type: integer
@@ -219,11 +218,7 @@ components:
           description: Abilita il calcolo del Modificatore di Difesa
           example: true
         teamsWithMidweekMatches:
-          type: array
-          description: Lista delle squadre di Serie A impegnate in coppe europee o infrasettimanali (+/- 3 giorni)
-          items:
-            type: string
-          example: [Inter, Milan, Atalanta]
+          $ref: 'lineup-shared-internal.yaml#/components/schemas/TeamsWithMidweekMatchesOverride'
 
     LineupResponse:
       type: object

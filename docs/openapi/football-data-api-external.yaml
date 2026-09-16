@@ -1,0 +1,87 @@
+openapi: 3.0.3
+info:
+  title: Football-Data.org v4 Client API
+  version: 1.0.0
+servers:
+  - url: https://api.football-data.org/v4
+
+paths:
+  /teams/{teamId}/matches:
+    get:
+      summary: Recupera le prossime o ultime partite di una squadra
+      tags:
+        - FootballData
+      operationId: getTeamMatches
+      parameters:
+        - name: teamId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            example: "SCHEDULED"
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 5
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MatchesResponse'
+
+components:
+  schemas:
+    MatchesResponse:
+      type: object
+      properties:
+        matches:
+          type: array
+          items:
+            $ref: '#/components/schemas/Match'
+
+    Match:
+      type: object
+      properties:
+        id:
+          type: integer
+        utcDate:
+          type: string
+          format: date-time
+        status:
+          type: string
+        matchday:
+          type: integer
+          description: Numero giornata di campionato (valorizzato per le partite di Serie A)
+        competition:
+          $ref: '#/components/schemas/Competition'
+        homeTeam:
+          $ref: '#/components/schemas/TeamRef'
+        awayTeam:
+          $ref: '#/components/schemas/TeamRef'
+
+    Competition:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        code:
+          type: string
+
+    TeamRef:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string

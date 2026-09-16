@@ -212,6 +212,7 @@
                 <artifactId>openapi-generator-maven-plugin</artifactId>
                 <version>7.4.0</version>
                 <executions>
+                    <!-- server fanta-win-api -->
                     <execution>
                         <id>fanta-win-internal</id>
                         <phase>generate-sources</phase>
@@ -252,6 +253,41 @@
                                     @lombok.AllArgsConstructor;
                                 </additionalModelTypeAnnotations>
                             </configOptions>
+                        </configuration>
+                    </execution>
+                    <!-- client football-data-api -->
+                    <execution>
+                        <phase>generate-resources</phase>
+                        <id>generate-client-football-data</id>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <configuration>
+                            <inputSpec>${project.basedir}/docs/openapi/football-data-api-external.yaml</inputSpec>
+                            <templateDirectory>${project.basedir}/src/main/resources/7.4.0/client/client</templateDirectory>                            <skipValidateSpec>true</skipValidateSpec>
+                            <generatorName>java</generatorName>
+                            <library>resttemplate</library>
+                            <generateApiTests>false</generateApiTests>
+                            <generateModelTests>false</generateModelTests>
+                            <additionalProperties>removeEnumValuePrefix=false</additionalProperties>
+                            <typeMappings>
+                                <typeMapping>OffsetDateTime=java.time.Instant</typeMapping>
+                            </typeMappings>
+                            <configOptions>
+                                <useJakartaEe>true</useJakartaEe>
+                                <swaggerAnnotations>false</swaggerAnnotations>
+                                <openApiNullable>false</openApiNullable>
+                                <dateLibrary>java8</dateLibrary>
+                                <delegatePattern>true</delegatePattern>
+                                <annotationLibrary>none</annotationLibrary>
+                                <documentationProvider>source</documentationProvider>
+                                <openApiNullable>false</openApiNullable>
+                                <!-- <containerDefaultToNull>true</containerDefaultToNull> Genera modelli con Liste e Map con default a null -->
+                                <skipDefaultInterface>false</skipDefaultInterface>
+                                <useTags>true</useTags>
+                            </configOptions>
+                            <apiPackage>${project.groupId}.fantawin.generated.openapi.msclient.football-data.api</apiPackage>
+                            <modelPackage>${project.groupId}.fantawin.generated.openapi.msclient.football-data.model</modelPackage>
                         </configuration>
                     </execution>
                 </executions>

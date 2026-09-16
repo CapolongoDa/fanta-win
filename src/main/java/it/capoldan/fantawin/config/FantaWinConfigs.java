@@ -16,6 +16,9 @@ import org.springframework.validation.annotation.Validated;
 @Slf4j
 public class FantaWinConfigs {
     private Dao dao;
+    private String footballDataBaseUrl;
+    private double defaultMatchDifficulty;
+    private double bigPlayerThreshold;
 
     @Data
     public static class Dao {

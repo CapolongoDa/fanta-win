@@ -1,0 +1,32 @@
+openapi: 3.0.1
+info:
+  title: Schemi interni condivisi per la Lineup Prediction
+  description: >-
+    Placeholder OpenAPI (stesso pattern di problem-internal.yaml) usato solo per
+    ospitare schemi interni referenziati via $ref da fanta-win-api-internal.yaml,
+    senza inquinare né lo YAML principale né il contratto client di terze parti
+    (football-data-api-internal.yaml).
+  version: '1.0'
+servers:
+  - url: http://localhost:8080
+    description: Generated server url
+paths:
+  /placeholder:
+    get:
+      description: placeholder
+      operationId: placeholderLineupShared
+      responses:
+        '200':
+          description: OK
+components:
+  schemas:
+    TeamsWithMidweekMatchesOverride:
+      type: array
+      description: >-
+        Override manuale e opzionale delle squadre con turni infrasettimanali/coppe
+        europee nella finestra ±3 giorni. Se omesso, il dato è calcolato automaticamente
+        da FixturesTable (popolata dal job di sincronizzazione con Football-Data.org).
+        Da usare solo se la sincronizzazione non è ancora avvenuta per una squadra.
+      items:
+        type: string
+      example: [Inter, Milan, Atalanta]

@@ -163,8 +163,10 @@ Resources:
         ContainerEnvEntry5: !Sub 'FANTA_WIN_DAO_PLAYERMATCHSTATSTABLENAME=${PlayerMatchStatsTableName}'
         ContainerEnvEntry6: !Sub 'FANTA_WIN_DAO_FIXTURESTABLENAME=${FixturesTableName}'
         ContainerEnvEntry7: !Sub 'FANTA_WIN_DAO_AVAILABILITYREPORTSTABLENAME=${AvailabilityReportsTableName}'
+        ContainerEnvEntry8: !Sub 'FANTA_WIN_FOOTBALLDATABASEURL=http://${ApplicationLoadBalancerDomain}:8080'
         ApplicativeEnvFileChecksum: !Ref ApplicativeEnvFileChecksum
-        MappedPaths: '/api/v1/*'
+        JavaToolOptions: '-Dreactor.netty.ioWorkerCount=50'
+        MappedPaths: '/fanta-win-not-available'
         ECSClusterName: !Ref ECSClusterName
         Subnets: !Join [ ',', !Ref SubnetsIds ]
         VpcId: !Ref VpcId
