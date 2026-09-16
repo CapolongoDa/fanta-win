@@ -87,6 +87,11 @@ Parameters:
     Default: false
     AllowedValues: [ true, false ]
 
+  FootballDataApiKey:
+    Type: String
+    NoEcho: true
+    Description: Token X-Auth-Token per le chiamate a Football-Data.org (fantawin.football-data-api-key)
+
   # Health check
   HealthCheckInterval:
     Type: Number
@@ -158,12 +163,13 @@ Resources:
         ContainerImageURI: !Sub '${ContainerImageUri}'
         ContainerEnvEntry1: !Sub 'AWS_REGIONCODE=${AWS::Region}'
         ContainerEnvEntry2: !Sub 'WIRE_TAP_LOG=${WireTapLogActivation}'
-        ContainerEnvEntry3: !Sub 'FANTA_WIN_DAO_ROSTERTABLENAME=${RosterTableName}'
-        ContainerEnvEntry4: !Sub 'FANTA_WIN_DAO_PLAYERSTABLENAME=${PlayersTableName}'
-        ContainerEnvEntry5: !Sub 'FANTA_WIN_DAO_PLAYERMATCHSTATSTABLENAME=${PlayerMatchStatsTableName}'
-        ContainerEnvEntry6: !Sub 'FANTA_WIN_DAO_FIXTURESTABLENAME=${FixturesTableName}'
-        ContainerEnvEntry7: !Sub 'FANTA_WIN_DAO_AVAILABILITYREPORTSTABLENAME=${AvailabilityReportsTableName}'
-        ContainerEnvEntry8: !Sub 'FANTA_WIN_FOOTBALLDATABASEURL=http://${ApplicationLoadBalancerDomain}:8080'
+        ContainerEnvEntry3: !Sub 'FANTAWIN_DAO_ROSTERTABLENAME=${RosterTableName}'
+        ContainerEnvEntry4: !Sub 'FANTAWIN_DAO_PLAYERSTABLENAME=${PlayersTableName}'
+        ContainerEnvEntry5: !Sub 'FANTAWIN_DAO_PLAYERMATCHSTATSTABLENAME=${PlayerMatchStatsTableName}'
+        ContainerEnvEntry6: !Sub 'FANTAWIN_DAO_FIXTURESTABLENAME=${FixturesTableName}'
+        ContainerEnvEntry7: !Sub 'FANTAWIN_DAO_AVAILABILITYREPORTSTABLENAME=${AvailabilityReportsTableName}'
+        ContainerEnvEntry8: 'FANTAWIN_FOOTBALLDATABASEURL=https://api.football-data.org/v4'
+        ContainerEnvEntry9: !Sub 'FANTAWIN_FOOTBALLDATAAPIKEY=${FootballDataApiKey}'
         ApplicativeEnvFileChecksum: !Ref ApplicativeEnvFileChecksum
         JavaToolOptions: '-Dreactor.netty.ioWorkerCount=50'
         MappedPaths: '/fanta-win-not-available'
