@@ -19,6 +19,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -56,10 +58,26 @@ public class RosterService {
         return rosterDao.getById(rosterId)
                 .switchIfEmpty(Mono.error(new NotFoundException(
                         "Rosa " + rosterId + " non trovata", ExceptionsCodes.ERROR_CODE_NOT_FOUND)))
-                .flatMap(roster -> Flux.fromIterable(safePlayers(roster))
-                        .flatMap(entry -> buildApiPlayer(entry.getPlayerId(), matchday))
-                        .collectList()
-                        .map(players -> groupByPosition(roster.getTeamName(), players)));
+                .zipWith(fixturesForMatchday(matchday))
+                .flatMap(tuple -> {
+                    RosterDto roster = tuple.getT1();
+                    Map<String, FixtureDto> fixturesByTeam = tuple.getT2();
+                    return Flux.fromIterable(safePlayers(roster))
+                            .flatMap(entry -> buildApiPlayer(entry.getPlayerId(), fixturesByTeam))
+                            .collectList()
+                            .map(players -> groupByPosition(roster.getTeamName(), players));
+                });
+    }
+
+    /** Un'unica query sulla partizione "matchday" per l'intera rosa (PK della tabella Fixtures),
+     * invece di una query ripetuta per ciascun giocatore filtrata poi in memoria: elimina fino a
+     * N query ridondanti (N = numero giocatori in rosa) per ogni chiamata a getRoster. */
+    private Mono<Map<String, FixtureDto>> fixturesForMatchday(Integer matchday) {
+        if (matchday == null) {
+            return Mono.just(Map.of());
+        }
+        return fixtureDao.findByMatchday(matchday)
+                .collectMap(FixtureDto::getRealTeam, Function.identity());
     }
 
     public Mono<Player> addOrUpdatePlayer(Player request, String rosterId) {
@@ -96,7 +114,7 @@ public class RosterService {
 
                                 return playerDao.save(playerDto)
                                         .then(rosterDao.save(roster))
-                                        .then(buildApiPlayer(request.getId(), null));
+                                        .then(buildApiPlayer(request.getId(), Map.<String, FixtureDto>of()));
                             });
                 })
                 .onErrorMap(ex -> !(ex instanceof it.capoldan.fantawin.exception.RuntimeException),
@@ -121,7 +139,7 @@ public class RosterService {
         return roster.getPlayers() == null ? List.of() : roster.getPlayers();
     }
 
-    private Mono<Player> buildApiPlayer(String playerId, Integer matchday) {
+    private Mono<Player> buildApiPlayer(String playerId, Map<String, FixtureDto> fixturesByTeam) {
         Mono<PlayerDto> playerMono = playerDao.getById(playerId)
                 .switchIfEmpty(Mono.error(new InternalException(
                         "Player " + playerId + " presente in rosa ma non trovato nel registry",
@@ -137,40 +155,33 @@ public class RosterService {
         Mono<List<PlayerMatchStatDto>> recentStatsMono = playerMatchStatDao.findByPlayer(playerId).collectList();
 
         return Mono.zip(playerMono, availabilityMono, recentStatsMono)
-                .flatMap(tuple -> {
+                .map(tuple -> {
                     PlayerDto player = tuple.getT1();
                     AvailabilityReportDto availability = tuple.getT2();
                     List<PlayerMatchStatDto> recentStats = tuple.getT3();
+                    FixtureDto fixture = fixturesByTeam.get(player.getRealTeam());
 
-                    Mono<FixtureDto> nextFixtureMono = (matchday == null)
-                            ? Mono.empty()
-                            : fixtureDao.findByMatchday(matchday)
-                            .filter(f -> f.getRealTeam().equals(player.getRealTeam()))
-                            .next();
-
-                    return nextFixtureMono
-                            .map(Optional::of)
-                            .defaultIfEmpty(Optional.empty())
-                            .map(fixtureOpt -> RosterAggregationMapper.toApiPlayer(
-                                    player,
-                                    availability.getStatus(),
-                                    availability.getStartingProbability(),
-                                    fixtureOpt.orElse(null),
-                                    recentStats));
+                    return RosterAggregationMapper.toApiPlayer(
+                            player,
+                            availability.getStatus(),
+                            availability.getStartingProbability(),
+                            fixture,
+                            recentStats);
                 });
     }
 
     private RosterResponse groupByPosition(String teamName, List<Player> players) {
+        // Un solo passaggio sulla lista (Collectors.groupingBy) invece di 4 scan separati,
+        // uno per ruolo, sull'intera lista dei giocatori.
+        Map<Player.PositionEnum, List<Player>> byPosition = players.stream()
+                .collect(Collectors.groupingBy(Player::getPosition));
+
         RosterResponse response = new RosterResponse();
         response.setTeamName(teamName);
-        response.setGoalkeepers(filterByPosition(players, Player.PositionEnum.POR));
-        response.setDefenders(filterByPosition(players, Player.PositionEnum.DIF));
-        response.setMidfielders(filterByPosition(players, Player.PositionEnum.CEN));
-        response.setForwards(filterByPosition(players, Player.PositionEnum.ATT));
+        response.setGoalkeepers(byPosition.getOrDefault(Player.PositionEnum.POR, List.of()));
+        response.setDefenders(byPosition.getOrDefault(Player.PositionEnum.DIF, List.of()));
+        response.setMidfielders(byPosition.getOrDefault(Player.PositionEnum.CEN, List.of()));
+        response.setForwards(byPosition.getOrDefault(Player.PositionEnum.ATT, List.of()));
         return response;
-    }
-
-    private List<Player> filterByPosition(List<Player> players, Player.PositionEnum position) {
-        return players.stream().filter(p -> p.getPosition() == position).toList();
     }
 }

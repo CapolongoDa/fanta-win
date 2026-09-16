@@ -16,6 +16,10 @@ import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -49,20 +53,43 @@ public class LineupPredictionService {
         return rosterDao.getById(rosterId)
                 .switchIfEmpty(Mono.error(new NotFoundException(
                         "Rosa " + rosterId + " non trovata", ExceptionsCodes.ERROR_CODE_NOT_FOUND)))
-                .flatMapMany(roster -> buildCalculations(roster.getPlayers(), request))
-                .collectList()
+                .flatMap(roster -> buildCalculations(roster.getPlayers(), request))
                 .map(allCalculations -> formationSelector.select(allCalculations, request));
     }
 
-    private Flux<PlayerCalculation> buildCalculations(List<RosterPlayerDto> players, LineupRequest request) {
-        if (players == null || players.isEmpty()) {
-            return Flux.empty();
+    private Mono<List<PlayerCalculation>> buildCalculations(List<RosterPlayerDto> rosterPlayers, LineupRequest request) {
+        if (rosterPlayers == null || rosterPlayers.isEmpty()) {
+            return Mono.just(List.of());
         }
-        return Flux.fromIterable(players)
-                .flatMap(rosterPlayer -> buildCalculation(rosterPlayer.getPlayerId(), request));
+
+        return Flux.fromIterable(rosterPlayers)
+                .flatMap(rosterPlayer -> playerDao.getById(rosterPlayer.getPlayerId()))
+                .collectList()
+                .flatMap(players -> fixturesByRealTeam(players, request.getMatchday())
+                        .flatMap(fixturesByTeam -> Flux.fromIterable(players)
+                                .flatMap(player -> buildCalculation(player, fixturesByTeam.get(player.getRealTeam()), request))
+                                .collectList()));
     }
 
-    private Mono<PlayerCalculation> buildCalculation(String playerId, LineupRequest request) {
+    /** Recupera la fixture della giornata una sola volta per ciascuna squadra reale distinta
+     * presente in rosa, invece che una volta per ogni giocatore: in una rosa di 25 e' comune
+     * avere piu' giocatori della stessa squadra reale, che condividono la stessa fixture. */
+    private Mono<Map<String, FixtureDto>> fixturesByRealTeam(List<PlayerDto> players, Integer matchday) {
+        Set<String> realTeams = players.stream()
+                .map(PlayerDto::getRealTeam)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        return Flux.fromIterable(realTeams)
+                .flatMap(team -> fixtureDao.getByMatchdayAndTeam(matchday, team)
+                        .map(fixture -> Map.entry(team, fixture)))
+                .collectMap(Map.Entry::getKey, Map.Entry::getValue);
+    }
+
+    private Mono<PlayerCalculation> buildCalculation(PlayerDto player, FixtureDto fixture, LineupRequest request) {
+        FixtureDto safeFixture = fixture != null ? fixture : FixtureDto.builder().build();
+        String playerId = player.getPlayerId();
+
         Mono<AvailabilityReportDto> availabilityMono = availabilityReportDao.getById(playerId)
                 .defaultIfEmpty(AvailabilityReportDto.builder()
                         .playerId(playerId)
@@ -70,17 +97,8 @@ public class LineupPredictionService {
                         .startingProbability(100.0)
                         .build());
 
-        return playerDao.getById(playerId).flatMap(player -> {
-            Mono<FixtureDto> fixtureMono = fixtureDao.getByMatchdayAndTeam(request.getMatchday(), player.getRealTeam())
-                    .defaultIfEmpty(FixtureDto.builder().build());
-
-            return Mono.zip(availabilityMono, fixtureMono)
-                    .flatMap(tuple -> {
-                        AvailabilityReportDto availability = tuple.getT1();
-                        FixtureDto fixture = tuple.getT2();
-                        return formAggregationService.computeFormComponents(playerId, fixture.getOpponentTeam())
-                                .map(form -> ratingCalculator.compute(player, availability, fixture, form, request));
-                    });
-        });
+        return availabilityMono.flatMap(availability ->
+                formAggregationService.computeFormComponents(playerId, safeFixture.getOpponentTeam())
+                        .map(form -> ratingCalculator.compute(player, availability, safeFixture, form, request)));
     }
 }
