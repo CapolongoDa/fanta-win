@@ -1,0 +1,48 @@
+# Ambiente di sviluppo locale per FantaWin.
+#
+# Uso:
+#   docker-compose up -d          # avvia LocalStack (DynamoDB) + dynamo-admin
+#   ./scripts/local/init.sh       # crea le tabelle e semina i dati di sviluppo (rosa/voti/disponibilita')
+#   docker-compose down           # ferma tutto (aggiungi -v per azzerare anche i dati persistiti)
+#
+# Dopo l'avvio l'app (config/application.properties, aws.endpoint-url=http://localhost:4566)
+# punta gia' a questo LocalStack senza altra configurazione.
+version: "3.9"
+
+services:
+  # AWS LocalStack - solo DynamoDB, l'unico servizio AWS usato da FantaWin
+  localstack:
+    image: 'localstack/localstack:4.1.1'
+    ports:
+      - '127.0.0.1:4566:4566'
+    environment:
+      - SERVICES=dynamodb
+      - AWS_DEFAULT_REGION=us-east-1
+      - DATA_DIR=${TEMPDATADIR:-/tmp/localstack/data}
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "fantawin-localstack-data:/var/lib/localstack"
+    networks:
+      - fantawin-network
+
+  # Tool di visualizzazione/gestione tabelle DynamoDB (utile per ispezionare Players, Roster, ecc.)
+  dynamo-admin:
+    depends_on:
+      - localstack
+    image: aaronshaf/dynamodb-admin
+    environment:
+      - DYNAMO_ENDPOINT=http://localstack:4566
+      - AWS_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=test
+      - AWS_SECRET_ACCESS_KEY=test
+    ports:
+      - '127.0.0.1:8001:8001'
+    networks:
+      - fantawin-network
+
+networks:
+  fantawin-network:
+    name: fantawin-develop-network
+
+volumes:
+  fantawin-localstack-data:

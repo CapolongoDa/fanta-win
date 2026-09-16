@@ -12,12 +12,13 @@
 #
 # Prerequisiti:
 #   - AWS CLI v2 installato
-#   - un endpoint DynamoDB locale in ascolto (default: LocalStack su http://localhost:4566,
-#     es. `docker run -p 4566:4566 localstack/localstack`) - coerente con
-#     aws.endpoint-url in config/application.properties
+#   - un endpoint DynamoDB locale in ascolto (default: LocalStack su http://localhost:4566) -
+#     coerente con aws.endpoint-url in config/application.properties. Il modo piu' semplice per
+#     avviarlo e' `docker-compose up -d` (vedi docker-compose.yml nella root del progetto), che
+#     porta su anche dynamo-admin (http://localhost:8001) per ispezionare le tabelle.
 #
 # Uso:
-#   ./scripts/local/init.sh
+#   docker-compose up -d && ./scripts/local/init.sh
 #   FANTAWIN_DYNAMO_ENDPOINT=http://localhost:4566 ./scripts/local/init.sh   # esplicito
 #
 set -euo pipefail

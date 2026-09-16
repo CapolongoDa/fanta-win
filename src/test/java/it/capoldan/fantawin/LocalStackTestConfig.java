@@ -34,7 +34,7 @@ import java.io.UncheckedIOException;
 @TestConfiguration
 public class LocalStackTestConfig {
 
-    private static final DockerImageName LOCALSTACK_IMAGE = DockerImageName.parse("localstack/localstack:3.8.1");
+    private static final DockerImageName LOCALSTACK_IMAGE = DockerImageName.parse("localstack/localstack:4.1.1");
 
     public static final LocalStackContainer LOCALSTACK = new LocalStackContainer(LOCALSTACK_IMAGE)
             .withServices(LocalStackContainer.Service.DYNAMODB);
