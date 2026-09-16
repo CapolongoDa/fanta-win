@@ -1,5 +1,6 @@
 package it.capoldan.fantawin.prediction;
 
+import it.capoldan.fantawin.LocalStackTestConfig;
 import it.capoldan.fantawin.dto.*;
 import it.capoldan.fantawin.generated.openapi.server.v1.dto.LineupRequest;
 import it.capoldan.fantawin.generated.openapi.server.v1.dto.LineupResponse;
@@ -13,15 +14,10 @@ import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.autoconfigure.web.reactive.AutoConfigureWebTestClient;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.context.annotation.Import;
 import org.springframework.test.web.reactive.server.WebTestClient;
 import org.testcontainers.containers.localstack.LocalStackContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.utility.DockerImageName;
 import reactor.core.publisher.Flux;
-import reactor.core.publisher.Mono;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
@@ -42,7 +38,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * chiamando il vero FootballDataSyncJob -> FootballDataClient -> football-data.org (non mockato).
  *
  * PREREQUISITI PER ESEGUIRLO:
- * 1) Docker in esecuzione in locale (Testcontainers avvia un container LocalStack per DynamoDB).
+ * 1) Docker in esecuzione in locale (LocalStackTestConfig avvia un container LocalStack per DynamoDB).
  * 2) Variabile d'ambiente FOOTBALL_DATA_API_KEY valorizzata con un token valido di football-data.org
  *    (nel progetto e' gia' configurata nella run configuration IntelliJ "FantaWinApplication" - se lanci
  *    il test da li' o esporti la stessa variabile in shell prima di "mvn test", il test gira per intero).
@@ -56,30 +52,14 @@ import static org.assertj.core.api.Assertions.assertThat;
  * giornata come "prossima" per le squadre coinvolte, cosi' non passa silenziosamente su dati vecchi).
  */
 @Slf4j
-@Testcontainers
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureWebTestClient(timeout = "PT30S")
+@Import(LocalStackTestConfig.class)
 @EnabledIfEnvironmentVariable(named = "FOOTBALL_DATA_API_KEY", matches = ".+")
 class LineupPredictionIntegrationTest {
 
     private static final int MATCHDAY_UNDER_TEST = 5;
     private static final String ROSTER_ID = "as-junior";
-
-    @Container
-    static LocalStackContainer localstack = new LocalStackContainer(DockerImageName.parse("localstack/localstack:3.8.1"))
-            .withServices(LocalStackContainer.Service.DYNAMODB);
-
-    @DynamicPropertySource
-    static void awsProperties(DynamicPropertyRegistry registry) {
-        registry.add("aws.endpoint-url", () -> localstack.getEndpointOverride(LocalStackContainer.Service.DYNAMODB).toString());
-        registry.add("aws.region-code", () -> localstack.getRegion());
-        registry.add("aws.access-key-id", () -> localstack.getAccessKey());
-        registry.add("aws.secret-access-key", () -> localstack.getSecretKey());
-        // Disattiva l'auto-config spring-cloud-aws (non usata dai nostri DAO, ma per sicurezza
-        // evitiamo che provi a raggiungere l'endpoint di default durante l'avvio del contesto).
-        registry.add("spring.cloud.aws.endpoint", () -> localstack.getEndpointOverride(LocalStackContainer.Service.DYNAMODB).toString());
-        registry.add("spring.cloud.aws.region.static", () -> localstack.getRegion());
-    }
 
     @Autowired
     private WebTestClient webTestClient;
@@ -99,10 +79,10 @@ class LineupPredictionIntegrationTest {
     @BeforeAll
     static void createTables() {
         DynamoDbClient client = DynamoDbClient.builder()
-                .endpointOverride(localstack.getEndpointOverride(LocalStackContainer.Service.DYNAMODB))
-                .region(Region.of(localstack.getRegion()))
+                .endpointOverride(LocalStackTestConfig.LOCALSTACK.getEndpointOverride(LocalStackContainer.Service.DYNAMODB))
+                .region(Region.of(LocalStackTestConfig.LOCALSTACK.getRegion()))
                 .credentialsProvider(StaticCredentialsProvider.create(
-                        AwsBasicCredentials.create(localstack.getAccessKey(), localstack.getSecretKey())))
+                        AwsBasicCredentials.create(LocalStackTestConfig.LOCALSTACK.getAccessKey(), LocalStackTestConfig.LOCALSTACK.getSecretKey())))
                 .build();
 
         createTable(client, "Players", "playerId", ScalarAttributeType.S, null, null);
