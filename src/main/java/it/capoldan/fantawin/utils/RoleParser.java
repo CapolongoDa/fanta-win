@@ -6,17 +6,24 @@ import java.util.Map;
 
 /**
  * Interpreta la stringa "ruolo" fornita dall'utente (bulk-add giocatori, import CSV del catalogo)
- * accettando sia la sigla classica fantacalcio.it (P/D/C/A, case-insensitive) sia la spelling
- * completa usata internamente (POR/DIF/CEN/ATT). Non tenta correzioni automatiche su valori non
- * riconosciuti: ritorna null e lascia al chiamante decidere come segnalarlo (mai indovinare un ruolo).
+ * accettando la sigla classica fantacalcio.it (P/D/C/A, case-insensitive), la spelling completa
+ * usata internamente (POR/DIF/CEN/ATT) e alcune sigle "Mantra" comuni che i clienti si aspettano
+ * di poter usare intercambiabilmente con quelle classiche (es. CC per centrocampista centrale, DC
+ * per difensore centrale). Non tenta correzioni automatiche su valori non riconosciuti: ritorna
+ * null e lascia al chiamante decidere come segnalarlo (mai indovinare un ruolo).
  */
 public final class RoleParser {
 
-    private static final Map<String, Role> LETTER_ALIASES = Map.of(
+    /** Alias accettati oltre alla spelling completa (gestita da Role.valueOf): sia le sigle
+     * classiche a singola lettera, sia alcune sigle "Mantra" a due lettere che compaiono spesso
+     * nei dati incollati dagli utenti pur non essendo Role enum values. */
+    private static final Map<String, Role> ALIASES = Map.of(
             "P", Role.POR,
             "D", Role.DIF,
             "C", Role.CEN,
-            "A", Role.ATT
+            "A", Role.ATT,
+            "DC", Role.DIF,
+            "CC", Role.CEN
     );
 
     private RoleParser() {
@@ -30,9 +37,9 @@ public final class RoleParser {
         if (v.isEmpty()) {
             return null;
         }
-        Role byLetter = LETTER_ALIASES.get(v);
-        if (byLetter != null) {
-            return byLetter;
+        Role byAlias = ALIASES.get(v);
+        if (byAlias != null) {
+            return byAlias;
         }
         try {
             return Role.valueOf(v);

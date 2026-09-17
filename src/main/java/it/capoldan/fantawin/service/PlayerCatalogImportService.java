@@ -5,8 +5,12 @@ import com.opencsv.CSVReader;
 import com.opencsv.CSVReaderBuilder;
 import it.capoldan.fantawin.dto.PlayerCatalogDto;
 import it.capoldan.fantawin.dto.Role;
+import it.capoldan.fantawin.exception.ExceptionsCodes;
+import it.capoldan.fantawin.exception.IdConflictException;
 import it.capoldan.fantawin.exception.InvalidImportFileException;
+import it.capoldan.fantawin.exception.ValidationException;
 import it.capoldan.fantawin.generated.openapi.server.v1.dto.PlayerCatalogImportResult;
+import it.capoldan.fantawin.generated.openapi.server.v1.dto.ProblemError;
 import it.capoldan.fantawin.middleware.dao.dynamo.PlayerCatalogDao;
 import it.capoldan.fantawin.utils.RoleParser;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +27,8 @@ import java.io.StringReader;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 /**
  * Import da CSV dell'anagrafica completa di Serie A (quotazioni fantacalcio.it) nella tabella
@@ -32,7 +38,7 @@ import java.util.List;
  *
  * Formato atteso: CSV separato da ';', UTF-8, intestazione sulla prima riga:
  * id;nome;ruolo;squadra
- * Tutte le colonne sono obbligatorie. "ruolo" accetta sia la sigla P/D/C/A che POR/DIF/CEN/ATT
+ * Tutte le colonne sono obbligatorie. "ruolo" accetta la sigla P/D/C/A, POR/DIF/CEN/ATT o alias Mantra come CC/DC
  * (vedi RoleParser) - un valore non riconosciuto scarta la riga senza bloccare l'intero import.
  * Ogni riga sovrascrive l'eventuale voce esistente con lo stesso id (nessuna cancellazione preventiva:
  * un id assente dal nuovo CSV resta semplicemente invariato in tabella).
@@ -42,9 +48,70 @@ import java.util.List;
 public class PlayerCatalogImportService {
 
     private final PlayerCatalogDao playerCatalogDao;
+    private final PlayerCatalogResolverService playerCatalogResolverService;
 
-    public PlayerCatalogImportService(PlayerCatalogDao playerCatalogDao) {
+    public PlayerCatalogImportService(PlayerCatalogDao playerCatalogDao,
+                                       PlayerCatalogResolverService playerCatalogResolverService) {
         this.playerCatalogDao = playerCatalogDao;
+        this.playerCatalogResolverService = playerCatalogResolverService;
+    }
+
+    /**
+     * Crea una singola voce in PlayerCatalog (a differenza di importFromCsv, pensato per il
+     * caricamento massivo) - tipicamente un giocatore mancante dalle quotazioni importate (es.
+     * nuovo arrivo a calciomercato chiuso). Il catalogId, a differenza dell'import CSV (dove e'
+     * l'id originale delle quotazioni fantacalcio.it), qui non e' mai fornito dal chiamante: viene
+     * generato come UUID, cosi' da non rischiare mai una collisione con un id numerico esistente.
+     * Rifiutata con IdConflictException se esiste gia' una voce con lo stesso nome (normalizzato)
+     * e ruolo: creare un duplicato qui renderebbe ambigua la risoluzione nome+ruolo usata da
+     * RosterService#addPlayersBulk (vedi PlayerCatalogResolverService).
+     */
+    public Mono<PlayerCatalogDto> addPlayer(String nomeRaw, String ruoloRaw, String squadraRaw) {
+        String nome = nomeRaw == null ? "" : nomeRaw.trim();
+        String squadra = squadraRaw == null ? "" : squadraRaw.trim();
+        if (nome.isEmpty() || ruoloRaw == null || ruoloRaw.isBlank() || squadra.isEmpty()) {
+            return Mono.error(new ValidationException(
+                    "nome, ruolo e squadra sono tutti obbligatori",
+                    List.of(ProblemError.builder()
+                            .code(ExceptionsCodes.ERROR_CODE_GENERIC_INVALIDPARAMETER)
+                            .element("nome/ruolo/squadra")
+                            .detail("nome, ruolo e squadra sono tutti obbligatori")
+                            .build()),
+                    null));
+        }
+        Role ruolo = RoleParser.parse(ruoloRaw);
+        if (ruolo == null) {
+            return Mono.error(new ValidationException(
+                    "ruolo non riconosciuto: '" + ruoloRaw + "'",
+                    List.of(ProblemError.builder()
+                            .code(ExceptionsCodes.ERROR_CODE_GENERIC_INVALIDPARAMETER)
+                            .element("ruolo")
+                            .detail("ruolo non riconosciuto: '" + ruoloRaw + "' (attesi P/D/C/A, POR/DIF/CEN/ATT o CC/DC)")
+                            .build()),
+                    null));
+        }
+
+        log.info("Aggiunta manuale a PlayerCatalog: nome={} ruolo={} squadra={}", nome, ruolo, squadra);
+        return playerCatalogResolverService.resolve(nome, ruolo)
+                .flatMap(resolution -> {
+                    if (resolution.isResolved()) {
+                        PlayerCatalogDto existing = resolution.match();
+                        log.warn("Aggiunta manuale a PlayerCatalog rifiutata: nome='{}' ruolo={} gia' presente con catalogId={}",
+                                nome, ruolo, existing.getCatalogId());
+                        return Mono.error(new IdConflictException(Map.of("nome",
+                                "gia' presente in anagrafica con catalogId=" + existing.getCatalogId())));
+                    }
+                    PlayerCatalogDto dto = PlayerCatalogDto.builder()
+                            .catalogId(UUID.randomUUID().toString())
+                            .nome(nome)
+                            .ruolo(ruolo)
+                            .squadra(squadra)
+                            .build();
+                    return playerCatalogDao.save(dto);
+                })
+                .doOnSuccess(saved -> log.info("PlayerCatalog: nuova voce creata catalogId={} nome={} ruolo={} squadra={}",
+                        saved.getCatalogId(), saved.getNome(), saved.getRuolo(), saved.getSquadra()))
+                .doOnError(ex -> log.warn("Errore nell'aggiunta manuale a PlayerCatalog per nome='{}' ruolo={}", nome, ruolo, ex));
     }
 
     public Mono<PlayerCatalogImportResult> importFromCsv(Flux<Part> fileParts) {
@@ -151,7 +218,7 @@ public class PlayerCatalogImportService {
 
         Role ruolo = RoleParser.parse(ruoloRaw);
         if (ruolo == null) {
-            throw new RowParseException("ruolo non riconosciuto: '" + ruoloRaw + "' (attesi P/D/C/A o POR/DIF/CEN/ATT)");
+            throw new RowParseException("ruolo non riconosciuto: '" + ruoloRaw + "' (attesi P/D/C/A, POR/DIF/CEN/ATT o CC/DC)");
         }
 
         return PlayerCatalogDto.builder()

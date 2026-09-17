@@ -98,7 +98,7 @@
 							}
 						],
 						"url": {
-							"raw": "{{baseUrl}}/fanta-private/addPlayer/{{rosterId}}",
+							"raw": "{{baseUrl}}/fanta-private/addPlayer/{{rosterId}}?teamName=AS Junior.",
 							"host": [
 								"{{baseUrl}}"
 							],
@@ -106,13 +106,20 @@
 								"fanta-private",
 								"addPlayer",
 								"{{rosterId}}"
+							],
+							"query": [
+								{
+									"key": "teamName",
+									"value": "AS Junior.",
+									"description": "Usato solo se rosterId non esiste ancora - ignorato se la rosa esiste gia'"
+								}
 							]
 						},
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"id\": \"okoye\",\n  \"name\": \"Okoye\",\n  \"realTeam\": \"Udinese\",\n  \"position\": \"POR\"\n}"
 						},
-						"description": "Aggiunge il giocatore alla rosa o aggiorna il suo slot se gia' presente (stesso id). Rispetta i vincoli sugli slot per ruolo (3 POR / 8 DIF / 8 CEN / 6 ATT)."
+						"description": "Aggiunge il giocatore alla rosa o aggiorna il suo slot se gia' presente (stesso id). Rispetta i vincoli sugli slot per ruolo (3 POR / 8 DIF / 8 CEN / 6 ATT). Se rosterId non esiste ancora, viene creata una nuova rosa: usa il query param teamName per darle un nome (ignorato se la rosa esiste gia')."
 					}
 				},
 				{
@@ -141,9 +148,9 @@
 						},
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"rosterId\": \"{{rosterId}}\",\n  \"players\": [\n    {\n      \"nome\": \"Oyono A.\",\n      \"ruolo\": \"DIF\"\n    },\n    {\n      \"nome\": \"Thuram\",\n      \"ruolo\": \"A\"\n    }\n  ]\n}"
+							"raw": "{\n  \"rosterId\": \"{{rosterId}}\",\n  \"teamName\": \"AS Junior.\",\n  \"players\": [\n    {\n      \"nome\": \"Oyono A.\",\n      \"ruolo\": \"DIF\"\n    },\n    {\n      \"nome\": \"Thuram\",\n      \"ruolo\": \"A\"\n    }\n  ]\n}"
 						},
-						"description": "Aggiunge in blocco piu' giocatori a una rosa a partire da rosterId + nome+ruolo (nessun id da inventare): ognuno viene risolto contro l'anagrafica PlayerCatalog (vedi cartella Player Catalog). Se rosterId non esiste ancora, viene creata una nuova rosa. Ruolo accetta sia P/D/C/A che POR/DIF/CEN/ATT. Le entry non risolvibili (ruolo sconosciuto, nessun match, o nome ambiguo tra piu' giocatori con lo stesso ruolo) non bloccano le altre, finiscono in 'unresolved' con il motivo. Massimo 25 giocatori per richiesta."
+						"description": "Aggiunge in blocco piu' giocatori a una rosa a partire da rosterId + nome+ruolo (nessun id da inventare): ognuno viene risolto contro l'anagrafica PlayerCatalog (vedi cartella Player Catalog). Se rosterId non esiste ancora, viene creata una nuova rosa - usa teamName per darle un nome (ignorato se la rosa esiste gia'). Ruolo accetta P/D/C/A, POR/DIF/CEN/ATT o alias Mantra come CC/DC. Le entry non risolvibili (ruolo sconosciuto, nessun match, o nome ambiguo tra piu' giocatori con lo stesso ruolo) non bloccano le altre, finiscono in 'unresolved' con il motivo. Massimo 25 giocatori per richiesta."
 					}
 				},
 				{
@@ -168,6 +175,30 @@
 							]
 						},
 						"description": "Rimuove il giocatore dalla rosa (non tocca l'anagrafica in Players)."
+					}
+				},
+				{
+					"name": "Delete Roster",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/fanta-private/rosters/{{rosterId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"fanta-private",
+								"rosters",
+								"{{rosterId}}"
+							]
+						},
+						"description": "Elimina l'intera rosa (rosterId, nome squadra e tutti i giocatori associati). Diverso da Delete Player, che rimuove un solo calciatore lasciando la rosa esistente."
 					}
 				}
 			]
@@ -300,6 +331,37 @@
 							]
 						},
 						"description": "Importa/aggiorna l'anagrafica completa di Serie A (PlayerCatalog), usata da 'Roster > Bulk Add Players' per risolvere nome+ruolo in un id. Da rilanciare ad ogni nuova stagione o quando cambiano le quotazioni. Righe con ruolo non riconosciuto non bloccano l'import, finiscono in 'errors'."
+					}
+				},
+				{
+					"name": "Add Player Catalog Entry",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/fanta-private/playercatalog",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"fanta-private",
+								"playercatalog"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nome\": \"Nuovo Acquisto\",\n  \"ruolo\": \"DIF\",\n  \"squadra\": \"Milan\"\n}"
+						},
+						"description": "Aggiunge manualmente un calciatore in anagrafica PlayerCatalog (a differenza di 'Import Player Catalog (CSV)', pensato per il caricamento massivo) - utile per un giocatore mancante dalle quotazioni importate. Il catalogId viene generato automaticamente. Rifiutata con 409 se esiste gia' una voce con lo stesso nome e ruolo."
 					}
 				}
 			]

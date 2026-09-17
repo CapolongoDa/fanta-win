@@ -4,7 +4,7 @@ info:
   description: >-
     API REST B2B per la gestione della rosa su DynamoDB e il calcolo predittivo 
     della formazione ottimale di Fantacalcio (FantaClaude).
-  version: 2.10.0
+  version: 2.13.0
   x-api-id: fantaclaude-lineup-manager-api-b2b
   termsOfService: https://fantaclaude.ai/termini-di-servizio
   contact:
@@ -110,7 +110,10 @@ paths:
   /fanta-private/addPlayer/{rosterId}:
     post:
       summary: Aggiunge o aggiorna un giocatore nella rosa
-      description: Inserisce un nuovo calciatore o ne aggiorna le statistiche e lo stato corrente.
+      description: >-
+        Inserisce un nuovo calciatore o ne aggiorna le statistiche e lo stato corrente. Se rosterId
+        non esiste ancora, viene creata una nuova rosa con questo id (assegnata al chiamante come
+        proprietario, se l'autenticazione e' attiva) - usa il parametro teamName per darle un nome.
       operationId: addOrUpdatePlayer
       tags:
         - Roster
@@ -122,6 +125,16 @@ paths:
           schema:
             type: string
             example: junior
+        - name: teamName
+          in: query
+          required: false
+          description: >-
+            Nome della squadra fantacalcistica. Usato solo se rosterId non esiste ancora e va
+            creata una nuova rosa (vedi descrizione dell'operazione); ignorato se la rosa esiste
+            gia', il nome esistente non viene mai sovrascritto da qui.
+          schema:
+            type: string
+            example: AS Junior.
       requestBody:
         required: true
         content:
@@ -244,6 +257,47 @@ paths:
                 $ref: 'problem-internal.yaml#/components/schemas/Problem'
         '404':
           description: Player not found
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
+        '503':
+          description: Storage DynamoDB temporaneamente non raggiungibile
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
+
+  /fanta-private/rosters/{rosterId}:
+    delete:
+      summary: Elimina l'intera rosa
+      description: >-
+        Cancella l'intero item Roster su DynamoDB (rosterId, nome squadra e tutti i giocatori
+        associati). Diverso da DELETE /fanta-private/{playerId}/{rosterId}, che rimuove un solo
+        calciatore lasciando la rosa esistente: questa operazione e' distruttiva e irreversibile
+        sull'intera squadra.
+      operationId: deleteRoster
+      tags:
+        - Roster
+      parameters:
+        - name: rosterId
+          in: path
+          required: true
+          description: id della squadra del fantacalcio da eliminare
+          schema:
+            type: string
+            example: junior
+      responses:
+        '204':
+          description: Rosa eliminata con successo
+        '403':
+          description: La rosa appartiene a un altro utente
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
+        '404':
+          description: Rosa non trovata
           content:
             application/json:
               schema:
@@ -525,7 +579,7 @@ paths:
         quotazioni fantacalcio.it), usato per popolare/aggiornare PlayerCatalog. Questa anagrafica e'
         poi usata da /fanta-private/addPlayers per risolvere nome+ruolo in un id quando si
         aggiunge un giocatore alla rosa. Formato atteso, separatore ';', UTF-8, intestazione su prima
-        riga: id;nome;ruolo;squadra. Ruolo accetta sia P/D/C/A che POR/DIF/CEN/ATT. Le righe non
+        riga: id;nome;ruolo;squadra. Ruolo accetta P/D/C/A, POR/DIF/CEN/ATT o alias Mantra come CC/DC. Le righe non
         risolvibili non bloccano l'import ma vengono riportate in errors.
       operationId: importPlayerCatalog
       tags:
@@ -558,6 +612,51 @@ paths:
                 $ref: 'problem-internal.yaml#/components/schemas/Problem'
         '500':
           description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
+        '503':
+          description: Storage DynamoDB temporaneamente non raggiungibile
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
+
+  /fanta-private/playercatalog:
+    post:
+      summary: Aggiunge manualmente un calciatore in anagrafica PlayerCatalog
+      description: >-
+        Crea una singola voce in PlayerCatalog (a differenza di /fanta-private/playercatalog/import,
+        pensato per il caricamento massivo via CSV) - utile per un giocatore mancante dalle quotazioni
+        importate (es. nuovo arrivo a calciomercato chiuso). L'id univoco (catalogId) viene generato
+        automaticamente, il chiamante non lo fornisce mai. Rifiutata con 409 se esiste gia' una voce
+        con lo stesso nome (normalizzato, senza distinguere maiuscole/accenti) e ruolo, per evitare
+        ambiguita' nella risoluzione nome+ruolo di /fanta-private/addPlayers.
+      operationId: addPlayerCatalogEntry
+      tags:
+        - PlayerCatalog
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddPlayerCatalogEntryRequest'
+      responses:
+        '201':
+          description: Calciatore creato in anagrafica con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerCatalogEntry'
+        '400':
+          description: nome, ruolo o squadra mancanti, oppure ruolo non riconosciuto
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
+        '409':
+          description: Esiste gia' una voce con lo stesso nome e ruolo in PlayerCatalog
           content:
             application/json:
               schema:
@@ -604,7 +703,58 @@ components:
           description: Dettaglio delle righe scartate, con numero di riga e motivo
           items:
             type: string
-          example: ["riga 12: ruolo non riconosciuto: 'X' (attesi P/D/C/A o POR/DIF/CEN/ATT)"]
+          example: ["riga 12: ruolo non riconosciuto: 'X' (attesi P/D/C/A, POR/DIF/CEN/ATT o CC/DC)"]
+
+    AddPlayerCatalogEntryRequest:
+      type: object
+      required:
+        - nome
+        - ruolo
+        - squadra
+      properties:
+        nome:
+          type: string
+          description: >-
+            Nome del calciatore come deve comparire in anagrafica (usato poi per la risoluzione
+            nome+ruolo di /fanta-private/addPlayers - vedi PlayerCatalogResolverService). Se il
+            cognome puo' essere condiviso da piu' giocatori nello stesso ruolo, usa un suffisso
+            disambiguante come fa fantacalcio.it (es. "Oyono A.").
+          example: Nuovo Acquisto
+        ruolo:
+          type: string
+          description: Ruolo del calciatore, sigla classica (P/D/C/A), spelling completo (POR/DIF/CEN/ATT) o alias Mantra (CC/DC)
+          example: DIF
+        squadra:
+          type: string
+          description: Squadra reale di Serie A del calciatore
+          example: Milan
+      example:
+        nome: Nuovo Acquisto
+        ruolo: DIF
+        squadra: Milan
+
+    PlayerCatalogEntry:
+      type: object
+      required:
+        - catalogId
+        - nome
+        - ruolo
+        - squadra
+      properties:
+        catalogId:
+          type: string
+          description: Id univoco generato automaticamente, da riusare come playerId quando il giocatore viene aggiunto a una rosa
+          example: 3f2504e0-4f89-11d3-9a0c-0305e82c3301
+        nome:
+          type: string
+          example: Nuovo Acquisto
+        ruolo:
+          type: string
+          description: Ruolo canonico (POR/DIF/CEN/ATT)
+          example: DIF
+        squadra:
+          type: string
+          example: Milan
 
     BulkAddPlayerEntry:
       type: object
@@ -621,7 +771,7 @@ components:
           example: Oyono A.
         ruolo:
           type: string
-          description: Ruolo del calciatore, sigla classica (P/D/C/A) o spelling completo (POR/DIF/CEN/ATT)
+          description: Ruolo del calciatore, sigla classica (P/D/C/A), spelling completo (POR/DIF/CEN/ATT) o alias Mantra (CC/DC)
           example: DIF
       example:
         nome: Oyono A.
@@ -640,6 +790,13 @@ components:
             nuova rosa con questo id (assegnata al chiamante come proprietario, se l'autenticazione
             e' attiva - vedi SecurityConfig).
           example: nuova-squadra
+        teamName:
+          type: string
+          description: >-
+            Nome della squadra fantacalcistica. Usato solo se rosterId non esiste ancora e va
+            creata una nuova rosa; ignorato se la rosa esiste gia', il nome esistente non viene
+            mai sovrascritto da qui.
+          example: AS Junior.
         players:
           type: array
           description: >-
@@ -652,6 +809,7 @@ components:
           maxItems: 25
       example:
         rosterId: nuova-squadra
+        teamName: AS Junior.
         players:
           - nome: Oyono A.
             ruolo: DIF

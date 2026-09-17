@@ -59,6 +59,11 @@ public class RosterAggregationMapper {
     private static List<Float> mapRecentScores(List<PlayerMatchStatDto> recentStats) {
         if (recentStats == null) return List.of();
         return recentStats.stream()
+                // matchDay e' Integer (nullable): una riga con matchDay assente non e' ordinabile per
+                // recenza in modo affidabile e va scartata, invece di far esplodere il comparator con
+                // una NullPointerException da autounboxing (successo prima di questo fix per qualunque
+                // giocatore con anche una sola riga di PlayerMatchStat con matchDay nullo).
+                .filter(stat -> stat.getMatchDay() != null)
                 .sorted((a, b) -> Integer.compare(b.getMatchDay(), a.getMatchDay())) // piu' recenti prima
                 .limit(5)
                 .map(PlayerMatchStatDto::getFantavoto) // ASSUNZIONE: si usa il fantavoto, non il voto puro
