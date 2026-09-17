@@ -3,11 +3,18 @@ package it.capoldan.fantawin;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.core.io.ClassPathResource;
+import org.testcontainers.containers.BindMode;
+import org.testcontainers.containers.Network;
 import org.testcontainers.containers.localstack.LocalStackContainer;
+import org.testcontainers.containers.wait.strategy.Wait;
 import org.testcontainers.utility.DockerImageName;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.time.Duration;
+
+import static org.testcontainers.containers.localstack.LocalStackContainer.Service.DYNAMODB;
+import static org.testcontainers.containers.localstack.LocalStackContainer.Service.SQS;
 
 /**
  * Configurazione condivisa del container LocalStack per i test di integrazione, sul modello
@@ -27,17 +34,22 @@ import java.io.UncheckedIOException;
  * Se l'errore e' "Could not find a valid Docker environment", il problema e' a monte - Testcontainers
  * non riesce a parlare col Docker daemon - e si presenta identico sia con @Container sia con questo
  * pattern, perche' in entrambi i casi "new LocalStackContainer(...)" prova a risolvere l'ambiente
- * Docker nel costruttore, prima ancora di start(). Vedi il messaggio di Claude in chat per i controlli
- * da fare su Docker Desktop/Colima.
+ * Docker nel costruttore, prima ancora di start().
  */
 @Slf4j
 @TestConfiguration
 public class LocalStackTestConfig {
 
-    private static final DockerImageName LOCALSTACK_IMAGE = DockerImageName.parse("localstack/localstack:4.1.1");
-
-    public static final LocalStackContainer LOCALSTACK = new LocalStackContainer(LOCALSTACK_IMAGE)
-            .withServices(LocalStackContainer.Service.DYNAMODB);
+    public static final LocalStackContainer LOCALSTACK = new LocalStackContainer(DockerImageName.parse("localstack/localstack:1.0.4").asCompatibleSubstituteFor("localstack/localstack"))
+            .withServices(DYNAMODB, SQS)
+            .withClasspathResourceMapping("testcontainers/init.sh",
+                    "/docker-entrypoint-initaws.d/make-storages.sh", BindMode.READ_ONLY)
+            .withClasspathResourceMapping("testcontainers/credentials",
+                    "/root/.aws/credentials", BindMode.READ_ONLY)
+            .withNetworkAliases("localstack")
+            .withNetwork(Network.builder().build())
+            .waitingFor(Wait.forLogMessage(".*Initialization terminated.*", 1)
+                    .withStartupTimeout(Duration.ofSeconds(180)));
 
     static {
         log.info("Avvio container LocalStack (DynamoDB) per i test di integrazione...");
@@ -48,8 +60,7 @@ public class LocalStackTestConfig {
         System.setProperty("aws.region-code", LOCALSTACK.getRegion());
 
         try {
-            String credentialsFilePath = new ClassPathResource("testcontainers/credentials").getFile().getAbsolutePath();
-            System.setProperty("aws.sharedCredentialsFile", credentialsFilePath);
+            System.setProperty("aws.sharedCredentialsFile", new ClassPathResource("testcontainers/credentials").getFile().getAbsolutePath());
         } catch (IOException e) {
             throw new UncheckedIOException(
                     "Impossibile risolvere src/test/resources/testcontainers/credentials sul classpath", e);

@@ -75,7 +75,7 @@ Pacchetti principali sotto `src/main/java/it/capoldan/fantawin/`:
 
 ## 🗄️ Modello dati (DynamoDB)
 
-Sei tabelle, tutte con billing `PAY_PER_REQUEST` (vedi `scripts/local/init.sh` per la creazione in locale):
+Sei tabelle, tutte con billing `PAY_PER_REQUEST` (vedi `src/test/resources/testcontainers/init.sh` per la creazione in locale):
 
 | Tabella | Chiave | Contenuto |
 |---|---|---|
@@ -182,7 +182,7 @@ La validazione "di forma" (campi obbligatori, `maxItems`, tipi) è demandata il 
 
 ## 🔐 Autenticazione
 
-Il modello di ownership è già implementato (`RosterDto.ownerId`, `RosterService.enforceOwnership`, un utente → 1..N rose) ma **l'autenticazione è disattivata di default**: `SecurityConfig` applica Cognito Hosted UI (JWT/OAuth2 resource server) solo se `spring.security.oauth2.resourceserver.jwt.issuer-uri` è valorizzato; altrimenti tutte le richieste passano (`permitAll()`) e `AuthenticatedUserProvider.currentUserId()` restituisce sempre `Optional.empty()` — le rose senza `ownerId` (come quelle seminate da `scripts/local/init.sh`) restano quindi aperte a chiunque, comportamento corretto per lo sviluppo locale ma **da non portare mai così in produzione**.
+Il modello di ownership è già implementato (`RosterDto.ownerId`, `RosterService.enforceOwnership`, un utente → 1..N rose) ma **l'autenticazione è disattivata di default**: `SecurityConfig` applica Cognito Hosted UI (JWT/OAuth2 resource server) solo se `spring.security.oauth2.resourceserver.jwt.issuer-uri` è valorizzato; altrimenti tutte le richieste passano (`permitAll()`) e `AuthenticatedUserProvider.currentUserId()` restituisce sempre `Optional.empty()` — le rose senza `ownerId` (come quelle seminate da `src/test/resources/testcontainers/init.sh`) restano quindi aperte a chiunque, comportamento corretto per lo sviluppo locale ma **da non portare mai così in produzione**.
 
 Per attivare l'autenticazione reale, valorizzare `COGNITO_ISSUER_URI` con l'issuer del proprio User Pool Cognito (`https://cognito-idp.<region>.amazonaws.com/<userPoolId>`) e passare `Authorization: Bearer <JWT>` nelle richieste.
 
@@ -211,7 +211,7 @@ Guida completa per portare su l'ambiente di sviluppo locale da zero.
 | **JDK** | 21+ | Compilazione ed esecuzione dell'app. |
 | **Apache Maven** | 3.8+ | Build, generazione codice da OpenAPI, test. |
 | **Docker** e **Docker Compose** | recenti | Avvio di LocalStack (DynamoDB locale) e di `dynamodb-admin`. |
-| **AWS CLI v2** | qualunque | Creazione tabelle e seed dati via `scripts/local/init.sh`. |
+| **AWS CLI v2** | qualunque | Creazione tabelle e seed dati via `src/test/resources/testcontainers/init.sh`. |
 | **jq** | qualunque | Solo per il seed dell'anagrafica `PlayerCatalog` da CSV in `init.sh` (facoltativo: senza `jq` lo script salta quel passo e resta possibile importare via API). |
 | Un client REST (Postman, Insomnia, `curl`) | — | Per chiamare le API: è pronta una collection in `scripts/postman/FantaWin.postman_collection.json`. |
 
@@ -275,6 +275,20 @@ Importa `scripts/postman/FantaWin.postman_collection.json` in Postman (o equival
 docker-compose down       # ferma LocalStack e dynamodb-admin
 docker-compose down -v    # come sopra, ma azzera anche i dati persistiti (volume fantawin-localstack-data)
 ```
+
+## Test di integrazione (Testcontainers + LocalStack)
+
+Richiedono un Docker engine attivo e raggiungibile sul socket standard.
+
+- **macOS (Docker Desktop):** Settings → Advanced → abilita
+  "Allow the default Docker socket to be used". Poi `docker info` deve rispondere.
+- **Windows (Docker Desktop):** usa il backend WSL2 (Settings → General) e avvia
+  Docker Desktop. Nessuna variabile d'ambiente necessaria.
+- **Linux / WSL2:** Docker in esecuzione; `/var/run/docker.sock` disponibile.
+
+NON impostare `DOCKER_HOST` a un path fisso: Testcontainers rileva da solo
+il socket (unix su Mac/Linux, named pipe su Windows). Un valore hardcoded
+funzionerebbe solo su un OS.
 
 ---
 
