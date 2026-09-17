@@ -26,8 +26,8 @@ public class FormationSelector {
                 .filter(c -> c.details().getFantaRating() > 0.0)
                 .toList();
 
-        Map<String, Double> pureVoteById = allCalculations.stream()
-                .collect(Collectors.toMap(c -> c.details().getPlayer().getId(), PlayerCalculation::recentPureVoteAverage));
+        Map<String, Double> fantavotoById = allCalculations.stream()
+                .collect(Collectors.toMap(c -> c.details().getPlayer().getId(), PlayerCalculation::recentFantavotoAverage));
 
         Map<String, List<PlayerRatingDetails>> byRole = eligible.stream()
                 .map(PlayerCalculation::details)
@@ -69,7 +69,7 @@ public class FormationSelector {
 
             int defenseBonus = 0;
             if (Boolean.TRUE.equals(request.getModifierActive()) && defCount == 4) {
-                defenseBonus = computeDefenseModifierBonus(goalkeepers.get(0), defenders, pureVoteById);
+                defenseBonus = computeDefenseModifierBonus(goalkeepers.get(0), defenders, fantavotoById);
             }
 
             double totalScore = baseTotal + defenseBonus;
@@ -102,21 +102,42 @@ public class FormationSelector {
         return new ArrayList<>(candidates.subList(0, n));
     }
 
+    /**
+     * Modificatore di Difesa: portiere + 4 difensori titolari (5 giocatori totali) - si scarta il
+     * fantavoto medio piu' basso del gruppo di 5 (puo' essere il portiere o un difensore) e si media
+     * il fantavoto (non il voto puro: comprende quindi i bonus gol/assist di difensori e portiere)
+     * dei 4 rimanenti. Il risultato viene mappato sulla griglia a step di 0.25 sotto, che assegna 0
+     * punti sotto 6.0 e sale di 1 punto ogni 0.25 fino a un massimo di 6 punti raggiunto a 7.25 e
+     * mantenuto anche oltre (es. a 7.75, come da griglia fornita).
+     */
     private int computeDefenseModifierBonus(PlayerRatingDetails goalkeeper, List<PlayerRatingDetails> defenders,
-                                            Map<String, Double> pureVoteById) {
+                                            Map<String, Double> fantavotoById) {
         List<PlayerRatingDetails> group = new ArrayList<>();
         group.add(goalkeeper);
         group.addAll(defenders);
 
-        double avgPureVote = group.stream()
-                .mapToDouble(p -> pureVoteById.getOrDefault(p.getPlayer().getId(), 0.0))
+        List<Double> fantavoti = group.stream()
+                .map(p -> fantavotoById.getOrDefault(p.getPlayer().getId(), 0.0))
+                .sorted()
+                .toList();
+
+        // Scarta il piu' basso dei 5, media i restanti 4
+        double avgBestFour = fantavoti.subList(1, fantavoti.size()).stream()
+                .mapToDouble(Double::doubleValue)
                 .average()
                 .orElse(0.0);
 
-        if (avgPureVote >= 7.0) return 6;
-        if (avgPureVote >= 6.5) return 3;
-        if (avgPureVote >= 6.0) return 1;
-        return 0;
+        return mapToDefenseGridPoints(avgBestFour);
+    }
+
+    /** Griglia fornita dall'utente: <6.0 = 0; da 6.0 in su +1 punto ogni 0.25, fino a un massimo di 6
+     * punti raggiunto a 7.25 (e confermato invariato a 7.75, quindi il tetto resta 6 oltre quel punto). */
+    private int mapToDefenseGridPoints(double avgFantavoto) {
+        if (avgFantavoto < 6.0) {
+            return 0;
+        }
+        int step = (int) Math.floor((avgFantavoto - 6.0) / 0.25);
+        return Math.min(step + 1, 6);
     }
 
     private List<PlayerRatingDetails> buildBench(List<PlayerRatingDetails> eligible,

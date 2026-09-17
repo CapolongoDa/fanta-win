@@ -23,6 +23,7 @@ public class PlayerMatchStatEntityMapper {
                 .assist(entity.getAssist())
                 .ammonizioni(entity.getAmmonizioni())
                 .espulsioni(entity.getEspulsioni())
+                .golSubiti(entity.getGolSubiti())
                 .xg(entity.getXg())
                 .xa(entity.getXa())
                 .build();
@@ -42,6 +43,7 @@ public class PlayerMatchStatEntityMapper {
                 .assist(dto.getAssist())
                 .ammonizioni(dto.getAmmonizioni())
                 .espulsioni(dto.getEspulsioni())
+                .golSubiti(dto.getGolSubiti())
                 .xg(dto.getXg())
                 .xa(dto.getXa())
                 .build();

@@ -30,8 +30,8 @@ public class PlayerDao implements BaseDao<PlayerDto> {
     }
 
     public Flux<PlayerDto> findAll() {
-        log.info("Scan completo della tabella Players");
         return Flux.from(table.scan().items())
+                .doOnNext(item -> log.info("Trovato Player playerId={}", item.getPlayerId()))
                 .map(PlayerEntityMapper::toDto)
                 .doOnError(ex -> log.warn("Errore durante lo scan della tabella Players", ex));
     }

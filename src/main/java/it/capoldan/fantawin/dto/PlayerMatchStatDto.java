@@ -33,6 +33,8 @@ public class PlayerMatchStatDto {
 
     private Integer espulsioni;
 
+    private Integer golSubiti;
+
     private Double xg;
 
     private Double xa;

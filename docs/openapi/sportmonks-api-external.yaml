@@ -1,0 +1,150 @@
+openapi: 3.0.3
+info:
+  title: SportMonks Football API 3.0 Client
+  version: 1.0.0
+servers:
+  - url: https://api.sportmonks.com/v3/football
+
+security:
+  - ApiKeyAuth: []
+
+paths:
+  /teams/search/{query}:
+    get:
+      summary: Cerca squadre per nome
+      description: >
+        Usata per risolvere il teamId numerico SportMonks di una squadra reale a partire dal nome
+        cosi' come censito nell'anagrafica giocatori (PlayerDto.realTeam), senza doverlo scoprire e
+        incollare a mano.
+      tags:
+        - SportMonks
+      operationId: searchTeams
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: query
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "Inter"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamSearchResponse'
+
+  /fixtures/between/{startDate}/{endDate}/{teamId}:
+    get:
+      summary: Partite di una squadra in un intervallo di date, con formazione ufficiale
+      description: >
+        Usata per trovare la partita di una squadra reale nella finestra attorno alla giornata
+        corrente e leggerne la formazione ufficiale (include=lineups) non appena viene comunicata
+        (di norma ~1h prima del calcio d'inizio).
+      tags:
+        - SportMonks
+      operationId: getFixturesBetweenForTeam
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: startDate
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "2026-09-19"
+        - name: endDate
+          in: path
+          required: true
+          schema:
+            type: string
+            example: "2026-09-22"
+        - name: teamId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: include
+          in: query
+          required: false
+          schema:
+            type: string
+            default: "lineups"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FixturesResponse'
+
+components:
+  securitySchemes:
+    # SportMonks API 3.0 autentica con il token come query param api_token (NON header/Bearer).
+    ApiKeyAuth:
+      type: apiKey
+      in: query
+      name: api_token
+  schemas:
+    TeamSearchResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SmTeam'
+
+    SmTeam:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        short_code:
+          type: string
+
+    FixturesResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SmFixture'
+
+    SmFixture:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        starting_at:
+          type: string
+        league_id:
+          type: integer
+        lineups:
+          type: array
+          items:
+            $ref: '#/components/schemas/SmLineupPlayer'
+
+    SmLineupPlayer:
+      type: object
+      properties:
+        player_id:
+          type: integer
+        player_name:
+          type: string
+        team_id:
+          type: integer
+        # 11 = titolare, 12 = subentrante/panchina (v. tutorial SportMonks "Lineups and formations")
+        type_id:
+          type: integer
+        formation_field:
+          type: string
+        position_id:
+          type: integer
+        jersey_number:
+          type: integer

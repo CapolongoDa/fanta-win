@@ -14,14 +14,21 @@ services:
   localstack:
     image: 'localstack/localstack:4.1.1'
     ports:
-      - '127.0.0.1:4566:4566'
+      - '4566:4566'
     environment:
       - SERVICES=dynamodb
       - AWS_DEFAULT_REGION=us-east-1
-      - DATA_DIR=${TEMPDATADIR:-/tmp/localstack/data}
+      # PERSISTENCE=1 e' la variabile corrente per LocalStack 2.x/3.x/4.x (DATA_DIR e' deprecata
+      # dalla 2.x in poi e non va usata insieme al volume sotto: puo' impedire l'avvio pulito
+      # del provider DynamoDB su alcune versioni dell'immagine).
+      - PERSISTENCE=1
     volumes:
-      - "/var/run/docker.sock:/var/run/docker.sock"
       - "fantawin-localstack-data:/var/lib/localstack"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     networks:
       - fantawin-network
 
@@ -36,7 +43,7 @@ services:
       - AWS_ACCESS_KEY_ID=test
       - AWS_SECRET_ACCESS_KEY=test
     ports:
-      - '127.0.0.1:8001:8001'
+      - '8001:8001'
     networks:
       - fantawin-network
 

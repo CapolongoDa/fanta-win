@@ -302,6 +302,40 @@
                             <modelPackage>${project.groupId}.fantawin.generated.openapi.msclient.football-data.model</modelPackage>
                         </configuration>
                     </execution>
+                    <!-- client sportmonks-api -->
+                    <execution>
+                        <phase>generate-resources</phase>
+                        <id>generate-client-sportmonks</id>
+                        <goals>
+                            <goal>generate</goal>
+                        </goals>
+                        <configuration>
+                            <inputSpec>${project.basedir}/docs/openapi/sportmonks-api-external.yaml</inputSpec>
+                            <templateDirectory>${project.basedir}/src/main/resources/7.4.0/client/client</templateDirectory>                            <skipValidateSpec>true</skipValidateSpec>
+                            <generatorName>java</generatorName>
+                            <library>resttemplate</library>
+                            <generateApiTests>false</generateApiTests>
+                            <generateModelTests>false</generateModelTests>
+                            <additionalProperties>removeEnumValuePrefix=false</additionalProperties>
+                            <typeMappings>
+                                <typeMapping>OffsetDateTime=java.time.Instant</typeMapping>
+                            </typeMappings>
+                            <configOptions>
+                                <useJakartaEe>true</useJakartaEe>
+                                <swaggerAnnotations>false</swaggerAnnotations>
+                                <openApiNullable>false</openApiNullable>
+                                <dateLibrary>java8</dateLibrary>
+                                <delegatePattern>true</delegatePattern>
+                                <annotationLibrary>none</annotationLibrary>
+                                <documentationProvider>source</documentationProvider>
+                                <openApiNullable>false</openApiNullable>
+                                <skipDefaultInterface>false</skipDefaultInterface>
+                                <useTags>true</useTags>
+                            </configOptions>
+                            <apiPackage>${project.groupId}.fantawin.generated.openapi.msclient.sportmonks.api</apiPackage>
+                            <modelPackage>${project.groupId}.fantawin.generated.openapi.msclient.sportmonks.model</modelPackage>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
 

@@ -29,11 +29,18 @@ public class PlayerRatingCalculator {
                     FantaRatingBreakdown.builder()
                             .baseFormScore(0.0f).historicalScore(0.0f).matchDifficultyXgScore(0.0f)
                             .midweekPenalty(0.0f).availabilityPenalty(0.0f).build());
-            return new PlayerCalculation(details, form.recentPureVoteAverage());
+            return new PlayerCalculation(details, form.recentPureVoteAverage(), form.recentFormScore());
         }
 
+        // Media pesata fantavoto/voto puro: il solo fantavoto premia i bonus fortunati (gol/assist)
+        // e puo' penalizzare un giocatore che gioca bene ma non ha ancora concretizzato in bonus.
+        // fantaWinConfigs.pureVoteWeight=0.0 riproduce il comportamento originale (solo fantavoto).
+        double pureVoteWeight = fantaWinConfigs.getPureVoteWeight();
+        double blendedRecentForm = form.recentFormScore() * (1.0 - pureVoteWeight)
+                + form.recentPureVoteAverage() * pureVoteWeight;
+
         double matchDifficultyXg = matchDifficultyComponent(fixture.getMatchDifficulty()) * 0.5 + form.xgXaScore() * 0.5;
-        double baseRating = form.recentFormScore() * 0.4
+        double baseRating = blendedRecentForm * 0.4
                 + form.historicalVsOpponentScore() * 0.3
                 + matchDifficultyXg * 0.3;
 
@@ -60,7 +67,7 @@ public class PlayerRatingCalculator {
         double finalRating = Math.clamp(baseRating + midweekPenalty + availabilityPenalty, 0.0, 10.0);
 
         FantaRatingBreakdown breakdown = FantaRatingBreakdown.builder()
-                .baseFormScore((float) (form.recentFormScore() * 0.4))
+                .baseFormScore((float) (blendedRecentForm * 0.4))
                 .historicalScore((float) (form.historicalVsOpponentScore() * 0.3))
                 .matchDifficultyXgScore((float) (matchDifficultyXg * 0.3))
                 .midweekPenalty((float) midweekPenalty)
@@ -68,7 +75,7 @@ public class PlayerRatingCalculator {
                 .build();
 
         PlayerRatingDetails details = buildDetails(player, availability, fixture, form.recentMatches(), finalRating, breakdown);
-        return new PlayerCalculation(details, form.recentPureVoteAverage());
+        return new PlayerCalculation(details, form.recentPureVoteAverage(), form.recentFormScore());
     }
 
     private double matchDifficultyComponent(Double matchDifficulty) {

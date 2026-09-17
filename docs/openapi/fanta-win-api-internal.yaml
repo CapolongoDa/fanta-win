@@ -4,7 +4,7 @@ info:
   description: >-
     API REST B2B per la gestione della rosa su DynamoDB e il calcolo predittivo 
     della formazione ottimale di Fantacalcio (FantaClaude).
-  version: 2.5.0
+  version: 2.6.0
   x-api-id: fantaclaude-lineup-manager-api-b2b
   termsOfService: https://fantaclaude.ai/termini-di-servizio
   contact:
@@ -264,6 +264,54 @@ paths:
               schema:
                 $ref: 'problem-internal.yaml#/components/schemas/Problem'
 
+  /fanta-private/lineups/sync-official/{rosterId}:
+    post:
+      summary: Legge da SportMonks la formazione ufficiale e aggiorna la disponibilita' dei giocatori
+      description: >
+        Per ogni squadra reale presente nella rosa, cerca su SportMonks (API 3.0) la partita nella
+        finestra di qualche giorno attorno ad "oggi" e, se la formazione ufficiale e' gia' stata
+        comunicata (di norma ~1h prima del calcio d'inizio), aggiorna in automatico
+        AvailabilityReport.startingProbability dei giocatori in rosa: 100 se confermati titolari,
+        0 se confermati in panchina. I giocatori non trovati nella formazione (non ancora
+        pubblicata, squadra non risolta su SportMonks o nome non corrispondente) non vengono
+        toccati e la squadra compare in unresolvedTeams.
+      operationId: syncOfficialLineup
+      tags:
+        - Lineups
+      parameters:
+        - name: rosterId
+          in: path
+          required: true
+          description: id della squadra del fantacalcio
+          schema:
+            type: string
+            example: junior
+      responses:
+        '200':
+          description: Sincronizzazione eseguita (anche se nessuna formazione era ancora disponibile)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfficialLineupSyncResult'
+        '404':
+          description: Rosa non trovata
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
+        '503':
+          description: SportMonks temporaneamente non raggiungibile
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
+
   /fanta-private/predict/lineup/{rosterId}:
     post:
       summary: Calcola l'undici titolare e la panchina ottimale per la giornata
@@ -338,6 +386,51 @@ components:
           items:
             type: string
           example: ["riga 5: nessun giocatore trovato per 'Mario Rossi' (Empoli)"]
+
+    OfficialLineupSyncResult:
+      type: object
+      required:
+        - updatedPlayers
+        - unresolvedTeams
+      properties:
+        updatedPlayers:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlayerAvailabilityUpdate'
+        unresolvedTeams:
+          type: array
+          description: >-
+            Squadre reali per cui non e' stato possibile leggere la formazione ufficiale (teamId non
+            risolto su SportMonks, fixture non trovato/ambiguo nella finestra di date, o formazione
+            non ancora pubblicata)
+          items:
+            type: string
+          example: [Milan]
+
+    PlayerAvailabilityUpdate:
+      type: object
+      required:
+        - playerId
+        - name
+        - realTeam
+        - confirmedStarter
+        - startingProbability
+      properties:
+        playerId:
+          type: string
+        name:
+          type: string
+          example: Barella
+        realTeam:
+          type: string
+          example: Inter
+        confirmedStarter:
+          type: boolean
+          description: true se confermato titolare, false se confermato in panchina
+        startingProbability:
+          type: number
+          format: double
+          example: 100.0
 
     FixtureLookupResult:
       type: object

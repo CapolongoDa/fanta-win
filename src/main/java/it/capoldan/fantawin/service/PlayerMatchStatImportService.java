@@ -9,6 +9,7 @@ import it.capoldan.fantawin.exception.InvalidImportFileException;
 import it.capoldan.fantawin.generated.openapi.server.v1.dto.MatchStatsImportResult;
 import it.capoldan.fantawin.middleware.dao.dynamo.PlayerDao;
 import it.capoldan.fantawin.middleware.dao.dynamo.PlayerMatchStatDao;
+import it.capoldan.fantawin.utils.FantaVotoCalculator;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.buffer.DataBuffer;
 import org.springframework.core.io.buffer.DataBufferUtils;
@@ -35,10 +36,19 @@ import java.util.Map;
  * copia-incolla in un foglio di calcolo).
  *
  * Formato atteso: CSV separato da ';', UTF-8, con intestazione sulla prima riga:
- * giocatore;squadra;giornata;stagione;avversario;casa;voto;fantavoto;gol;assist;ammonizioni;espulsioni;xg;xa
+ * giocatore;squadra;giornata;stagione;avversario;casa;voto;fantavoto;gol;assist;ammonizioni;espulsioni;xg;xa;golsubiti
  * Solo giocatore, squadra e giornata sono obbligatori; gli altri campi possono essere vuoti.
  * Il giocatore viene risolto incrociando nome+squadra reale con l'anagrafica (PlayerDao): una riga
  * il cui giocatore non viene trovato non blocca l'intero import, ma viene riportata in "errors".
+ *
+ * Il fantavoto NON viene piu' preso dalla colonna "fantavoto" del CSV: viene sempre ricalcolato da
+ * FantaVotoCalculator a partire da voto+gol+assist+golsubiti+ammonizioni+espulsioni (gol +3, assist
+ * +1, gol subito -1, ammonizione -0.5, espulsione -1 - vedi FantaVotoCalculator per i dettagli). La
+ * colonna "fantavoto" resta nel formato solo per compatibilita' con CSV gia' preparati: se
+ * valorizzata viene confrontata con quella calcolata e, in caso di scostamento, segnalata con un
+ * warning nei log (utile per scovare errori di trascrizione in gol/assist/golsubiti/ammonizioni/
+ * espulsioni), ma il valore salvato e' sempre e solo quello calcolato.
+ * "golsubiti" va valorizzato solo per portiere/difensori (per gli altri ruoli lascia vuoto/0).
  */
 @Slf4j
 @Service
@@ -182,20 +192,39 @@ public class PlayerMatchStatImportService {
 
         Integer matchday = parseInt(matchdayRaw, "giornata");
 
+        Double voto = parseDouble(colOrNull(row, 6), "voto");
+        Double fantavotoDaCsv = parseDouble(colOrNull(row, 7), "fantavoto");
+        Integer gol = parseInt(colOrNull(row, 8), "gol");
+        Integer assist = parseInt(colOrNull(row, 9), "assist");
+        Integer ammonizioni = parseInt(colOrNull(row, 10), "ammonizioni");
+        Integer espulsioni = parseInt(colOrNull(row, 11), "espulsioni");
+        Double xg = parseDouble(colOrNull(row, 12), "xg");
+        Double xa = parseDouble(colOrNull(row, 13), "xa");
+        Integer golSubiti = parseInt(colOrNull(row, 14), "golsubiti");
+
+        Double fantavotoCalcolato = FantaVotoCalculator.calcola(voto, gol, assist, golSubiti, ammonizioni, espulsioni);
+        if (fantavotoDaCsv != null && fantavotoCalcolato != null
+                && Math.abs(fantavotoDaCsv - fantavotoCalcolato) > 0.01) {
+            log.warn("Import CSV riga {}: fantavoto nel file ({}) diverso da quello calcolato ({}) per '{}' " +
+                            "giornata {} - salvato comunque il valore calcolato, verifica gol/assist/golsubiti/ammonizioni",
+                    rowNumber, fantavotoDaCsv, fantavotoCalcolato, playerName, matchday);
+        }
+
         return PlayerMatchStatDto.builder()
                 .playerId(playerId)
                 .matchDay(matchday)
                 .season(colOrNull(row, 3))
                 .opponentTeam(colOrNull(row, 4))
                 .home(parseBoolean(colOrNull(row, 5)))
-                .voto(parseDouble(colOrNull(row, 6), "voto"))
-                .fantavoto(parseDouble(colOrNull(row, 7), "fantavoto"))
-                .gol(parseInt(colOrNull(row, 8), "gol"))
-                .assist(parseInt(colOrNull(row, 9), "assist"))
-                .ammonizioni(parseInt(colOrNull(row, 10), "ammonizioni"))
-                .espulsioni(parseInt(colOrNull(row, 11), "espulsioni"))
-                .xg(parseDouble(colOrNull(row, 12), "xg"))
-                .xa(parseDouble(colOrNull(row, 13), "xa"))
+                .voto(voto)
+                .fantavoto(fantavotoCalcolato)
+                .gol(gol)
+                .assist(assist)
+                .ammonizioni(ammonizioni)
+                .espulsioni(espulsioni)
+                .golSubiti(golSubiti)
+                .xg(xg)
+                .xa(xa)
                 .build();
     }
 

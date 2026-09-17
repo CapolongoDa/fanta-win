@@ -27,6 +27,7 @@ public class PlayerMatchStatEntity {
     private static final String COL_ASSIST = "assist";
     private static final String COL_AMMONIZIONI = "ammonizioni";
     private static final String COL_ESPULSIONI = "espulsioni";
+    private static final String COL_GOL_SUBITO = "golSubiti";
     private static final String COL_XG = "xg";
     private static final String COL_XA = "xa";
 
@@ -62,6 +63,9 @@ public class PlayerMatchStatEntity {
 
     @Getter(onMethod=@__({@DynamoDbAttribute(COL_ESPULSIONI)}))
     private Integer espulsioni;
+
+    @Getter(onMethod=@__({@DynamoDbAttribute(COL_GOL_SUBITO)}))
+    private Integer golSubiti;
 
     @Getter(onMethod=@__({@DynamoDbAttribute(COL_XG)}))
     private Double xg;
