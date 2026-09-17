@@ -16,7 +16,12 @@ services:
     ports:
       - '4566:4566'
     environment:
-      - SERVICES=dynamodb
+      # secretsmanager e' opzionale: serve solo per testare in locale il config import di
+      # spring.config.import=optional:aws-secretsmanager:... (vedi application.properties) - senza
+      # un secret seminato a mano (aws secretsmanager create-secret --endpoint-url ...) l'import viene
+      # comunque saltato, quindi aggiungerlo qui non richiede altre modifiche per continuare a lavorare
+      # come prima.
+      - SERVICES=dynamodb,secretsmanager
       - AWS_DEFAULT_REGION=us-east-1
       # PERSISTENCE=1 e' la variabile corrente per LocalStack 2.x/3.x/4.x (DATA_DIR e' deprecata
       # dalla 2.x in poi e non va usata insieme al volume sotto: puo' impedire l'avvio pulito
