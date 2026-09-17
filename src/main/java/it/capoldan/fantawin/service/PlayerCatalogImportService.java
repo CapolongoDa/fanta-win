@@ -32,7 +32,7 @@ import java.util.List;
  *
  * Formato atteso: CSV separato da ';', UTF-8, intestazione sulla prima riga:
  * id;nome;ruolo;squadra
- * Tutte le colonne sono obbligatorie. "ruolo" accetta sia la sigla P/D/C/A che POR/DIF/CEN/ATT
+ * Tutte le colonne sono obbligatorie. "ruolo" accetta la sigla P/D/C/A, POR/DIF/CEN/ATT o alias Mantra come CC/DC
  * (vedi RoleParser) - un valore non riconosciuto scarta la riga senza bloccare l'intero import.
  * Ogni riga sovrascrive l'eventuale voce esistente con lo stesso id (nessuna cancellazione preventiva:
  * un id assente dal nuovo CSV resta semplicemente invariato in tabella).
@@ -151,7 +151,7 @@ public class PlayerCatalogImportService {
 
         Role ruolo = RoleParser.parse(ruoloRaw);
         if (ruolo == null) {
-            throw new RowParseException("ruolo non riconosciuto: '" + ruoloRaw + "' (attesi P/D/C/A o POR/DIF/CEN/ATT)");
+            throw new RowParseException("ruolo non riconosciuto: '" + ruoloRaw + "' (attesi P/D/C/A, POR/DIF/CEN/ATT o CC/DC)");
         }
 
         return PlayerCatalogDto.builder()

@@ -80,4 +80,13 @@ public class RosterController {
                 .then(Mono.just(new ResponseEntity<>(HttpStatus.NO_CONTENT)))
                 .doOnError(ex -> log.warn("Richiesta deletePlayer fallita per playerId={} rosterId={}", playerId, rosterId, ex));
     }
+
+    @DeleteMapping(value = "/fanta-private/rosters/{rosterId}", produces = "application/json")
+    public Mono<ResponseEntity<Object>> deleteRoster(@PathVariable("rosterId") String rosterId) {
+        log.info("Richiesta DELETE /fanta-private/rosters/{} ricevuta", rosterId);
+        return authenticatedUserProvider.currentUserId()
+                .flatMap(callerId -> rosterService.deleteRoster(rosterId, callerId))
+                .then(Mono.just(new ResponseEntity<>(HttpStatus.NO_CONTENT)))
+                .doOnError(ex -> log.warn("Richiesta deleteRoster fallita per rosterId={}", rosterId, ex));
+    }
 }

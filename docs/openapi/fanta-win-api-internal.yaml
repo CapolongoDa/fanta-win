@@ -4,7 +4,7 @@ info:
   description: >-
     API REST B2B per la gestione della rosa su DynamoDB e il calcolo predittivo 
     della formazione ottimale di Fantacalcio (FantaClaude).
-  version: 2.10.0
+  version: 2.11.0
   x-api-id: fantaclaude-lineup-manager-api-b2b
   termsOfService: https://fantaclaude.ai/termini-di-servizio
   contact:
@@ -244,6 +244,47 @@ paths:
                 $ref: 'problem-internal.yaml#/components/schemas/Problem'
         '404':
           description: Player not found
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
+        '503':
+          description: Storage DynamoDB temporaneamente non raggiungibile
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
+
+  /fanta-private/rosters/{rosterId}:
+    delete:
+      summary: Elimina l'intera rosa
+      description: >-
+        Cancella l'intero item Roster su DynamoDB (rosterId, nome squadra e tutti i giocatori
+        associati). Diverso da DELETE /fanta-private/{playerId}/{rosterId}, che rimuove un solo
+        calciatore lasciando la rosa esistente: questa operazione e' distruttiva e irreversibile
+        sull'intera squadra.
+      operationId: deleteRoster
+      tags:
+        - Roster
+      parameters:
+        - name: rosterId
+          in: path
+          required: true
+          description: id della squadra del fantacalcio da eliminare
+          schema:
+            type: string
+            example: junior
+      responses:
+        '204':
+          description: Rosa eliminata con successo
+        '403':
+          description: La rosa appartiene a un altro utente
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
+        '404':
+          description: Rosa non trovata
           content:
             application/json:
               schema:
@@ -525,7 +566,7 @@ paths:
         quotazioni fantacalcio.it), usato per popolare/aggiornare PlayerCatalog. Questa anagrafica e'
         poi usata da /fanta-private/addPlayers per risolvere nome+ruolo in un id quando si
         aggiunge un giocatore alla rosa. Formato atteso, separatore ';', UTF-8, intestazione su prima
-        riga: id;nome;ruolo;squadra. Ruolo accetta sia P/D/C/A che POR/DIF/CEN/ATT. Le righe non
+        riga: id;nome;ruolo;squadra. Ruolo accetta P/D/C/A, POR/DIF/CEN/ATT o alias Mantra come CC/DC. Le righe non
         risolvibili non bloccano l'import ma vengono riportate in errors.
       operationId: importPlayerCatalog
       tags:
@@ -604,7 +645,7 @@ components:
           description: Dettaglio delle righe scartate, con numero di riga e motivo
           items:
             type: string
-          example: ["riga 12: ruolo non riconosciuto: 'X' (attesi P/D/C/A o POR/DIF/CEN/ATT)"]
+          example: ["riga 12: ruolo non riconosciuto: 'X' (attesi P/D/C/A, POR/DIF/CEN/ATT o CC/DC)"]
 
     BulkAddPlayerEntry:
       type: object
@@ -621,7 +662,7 @@ components:
           example: Oyono A.
         ruolo:
           type: string
-          description: Ruolo del calciatore, sigla classica (P/D/C/A) o spelling completo (POR/DIF/CEN/ATT)
+          description: Ruolo del calciatore, sigla classica (P/D/C/A), spelling completo (POR/DIF/CEN/ATT) o alias Mantra (CC/DC)
           example: DIF
       example:
         nome: Oyono A.

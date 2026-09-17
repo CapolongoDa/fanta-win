@@ -169,6 +169,30 @@
 						},
 						"description": "Rimuove il giocatore dalla rosa (non tocca l'anagrafica in Players)."
 					}
+				},
+				{
+					"name": "Delete Roster",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/fanta-private/rosters/{{rosterId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"fanta-private",
+								"rosters",
+								"{{rosterId}}"
+							]
+						},
+						"description": "Elimina l'intera rosa (rosterId, nome squadra e tutti i giocatori associati). Diverso da Delete Player, che rimuove un solo calciatore lasciando la rosa esistente."
+					}
 				}
 			]
 		},

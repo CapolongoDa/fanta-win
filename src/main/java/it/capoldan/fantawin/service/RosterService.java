@@ -168,7 +168,7 @@ public class RosterService {
         if (role == null) {
             log.warn("Bulk-add rosterId={}: ruolo non riconosciuto '{}' per nome='{}'", rosterId, entry.getRuolo(), entry.getNome());
             return Mono.just(BulkAddOutcome.unresolved(entry.getNome(), entry.getRuolo(),
-                    "ruolo non riconosciuto: '" + entry.getRuolo() + "' (attesi P/D/C/A o POR/DIF/CEN/ATT)"));
+                    "ruolo non riconosciuto: '" + entry.getRuolo() + "' (attesi P/D/C/A, POR/DIF/CEN/ATT o CC/DC)"));
         }
         return playerCatalogResolverService.resolve(entry.getNome(), role)
                 .flatMap(resolution -> {
@@ -316,6 +316,26 @@ public class RosterService {
                 .then()
                 .doOnSuccess(v -> log.info("Giocatore id={} rimosso da rosterId={}", playerId, rosterId))
                 .doOnError(ex -> log.warn("Errore nella rimozione del giocatore id={} da rosterId={}", playerId, rosterId, ex));
+    }
+
+    /** Elimina l'intera rosa (l'item Roster su DynamoDB), non solo un giocatore al suo interno -
+     * distinto da deletePlayer, che rimuove un solo calciatore lasciando la rosa esistente. Verifica
+     * prima l'esistenza e l'ownership, cosi' un rosterId inesistente torna 404 invece di un
+     * successo silenzioso (a differenza di deletePlayer, qui l'azione e' distruttiva e irreversibile
+     * sull'intera squadra quindi conviene essere espliciti). */
+    public Mono<Void> deleteRoster(String rosterId, Optional<String> callerId) {
+        log.info("Elimino l'intera rosa rosterId={}", rosterId);
+        return rosterDao.getById(rosterId)
+                .switchIfEmpty(Mono.defer(() -> {
+                    log.warn("Rosa {} non trovata durante deleteRoster", rosterId);
+                    return Mono.error(new NotFoundException(
+                            "Rosa " + rosterId + " non trovata", ExceptionsCodes.ERROR_CODE_NOT_FOUND));
+                }))
+                .flatMap(roster -> enforceOwnership(roster, callerId))
+                .flatMap(roster -> rosterDao.delete(rosterId))
+                .then()
+                .doOnSuccess(v -> log.info("Rosa rosterId={} eliminata", rosterId))
+                .doOnError(ex -> log.warn("Errore nell'eliminazione della rosa rosterId={}", rosterId, ex));
     }
 
     private static List<RosterPlayerDto> safePlayers(RosterDto roster) {
