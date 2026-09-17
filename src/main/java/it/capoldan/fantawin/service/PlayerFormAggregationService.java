@@ -51,7 +51,11 @@ public class PlayerFormAggregationService {
     }
 
     private List<PlayerMatchStatDto> recentMatches(List<PlayerMatchStatDto> history) {
+        // matchDay nullo va scartato prima di ordinare: Comparator.comparing chiama compareTo()
+        // sull'Integer estratto, che lancia NullPointerException se e' null (stesso bug gia' corretto
+        // in RosterAggregationMapper.mapRecentScores per lo stesso identico pattern).
         return history.stream()
+                .filter(stat -> stat.getMatchDay() != null)
                 .sorted(Comparator.comparing(PlayerMatchStatDto::getMatchDay).reversed())
                 .limit(RECENT_MATCHES_WINDOW)
                 .toList();

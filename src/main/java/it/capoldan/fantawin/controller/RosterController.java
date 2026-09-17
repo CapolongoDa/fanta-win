@@ -5,11 +5,9 @@ import it.capoldan.fantawin.generated.openapi.server.v1.dto.BulkAddRosterRequest
 import it.capoldan.fantawin.security.AuthenticatedUserProvider;
 import it.capoldan.fantawin.service.RosterService;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,7 +19,6 @@ import reactor.core.publisher.Mono;
 
 @Slf4j
 @RestController
-@Validated
 public class RosterController {
 
     private final RosterService rosterService;
@@ -43,8 +40,13 @@ public class RosterController {
     }
 
     @GetMapping(value = "/fanta-private/getRoster/{rosterId}", produces = "application/json")
+    // matchDay e' gia' dichiarato "required: true" nello spec OpenAPI (vedi getRoster in
+    // fanta-win-api-internal.yaml): Spring rifiuta gia' da solo una richiesta senza questo query param
+    // prima ancora di eseguire un qualsiasi metodo di controller, quindi un ulteriore @NotNull qui era
+    // validazione morta e mai raggiunta, oltretutto instradata verso ConstraintViolationToProblemErrorMapper
+    // invece del percorso standard usato per gli altri errori di validazione.
     public Mono<ResponseEntity<Object>> getRoster(@PathVariable("rosterId") String rosterId,
-                                                   @NotNull @RequestParam(value = "matchDay", required = true) Integer matchDay) {
+                                                   @RequestParam(value = "matchDay", required = true) Integer matchDay) {
         log.info("Richiesta GET /fanta-private/getRoster/{} matchDay={} ricevuta", rosterId, matchDay);
         return authenticatedUserProvider.currentUserId()
                 .flatMap(callerId -> rosterService.getRoster(matchDay, rosterId, callerId))

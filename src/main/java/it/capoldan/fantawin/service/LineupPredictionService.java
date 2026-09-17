@@ -1,6 +1,7 @@
 package it.capoldan.fantawin.service;
 
 import it.capoldan.fantawin.dto.*;
+import it.capoldan.fantawin.exception.DataIntegrityException;
 import it.capoldan.fantawin.exception.ExceptionsCodes;
 import it.capoldan.fantawin.exception.NotFoundException;
 import it.capoldan.fantawin.generated.openapi.server.v1.dto.LineupRequest;
@@ -80,23 +81,34 @@ public class LineupPredictionService {
                         .startingProbability(100.0)
                         .build());
 
-        return playerDao.getById(playerId).flatMap(player -> {
-            Mono<FixtureDto> fixtureMono = fixtureDao.getByMatchdayAndTeam(request.getMatchday(), player.getRealTeam())
-                    .defaultIfEmpty(FixtureDto.builder().build())
-                    .doOnNext(fixture -> {
-                        if (fixture.getRealTeam() == null) {
-                            log.warn("Nessuna fixture trovata per realTeam={} matchday={}: FantaRating calcolato senza dati di difficolta' match",
-                                    player.getRealTeam(), request.getMatchday());
-                        }
-                    });
+        return playerDao.getById(playerId)
+                .switchIfEmpty(Mono.defer(() -> {
+                    // Il giocatore e' referenziato dalla rosa ma assente dall'anagrafica: incoerenza tra
+                    // tabelle DynamoDB (stesso caso di RosterService.buildApiPlayer). Senza questo controllo
+                    // il giocatore spariva silenziosamente dal calcolo della formazione, senza alcun log
+                    // ne' errore, falsando il risultato invece di segnalare il problema.
+                    log.warn("Incoerenza dati: giocatore id={} presente in rosa ma assente dal registry Players: " +
+                            "escluso dal calcolo della formazione", playerId);
+                    return Mono.error(new DataIntegrityException(
+                            "Player " + playerId + " presente in rosa ma non trovato nel registry"));
+                }))
+                .flatMap(player -> {
+                    Mono<FixtureDto> fixtureMono = fixtureDao.getByMatchdayAndTeam(request.getMatchday(), player.getRealTeam())
+                            .defaultIfEmpty(FixtureDto.builder().build())
+                            .doOnNext(fixture -> {
+                                if (fixture.getRealTeam() == null) {
+                                    log.warn("Nessuna fixture trovata per realTeam={} matchday={}: FantaRating calcolato senza dati di difficolta' match",
+                                            player.getRealTeam(), request.getMatchday());
+                                }
+                            });
 
-            return Mono.zip(availabilityMono, fixtureMono)
-                    .flatMap(tuple -> {
-                        AvailabilityReportDto availability = tuple.getT1();
-                        FixtureDto fixture = tuple.getT2();
-                        return formAggregationService.computeFormComponents(playerId, fixture.getOpponentTeam())
-                                .map(form -> ratingCalculator.compute(player, availability, fixture, form, request));
-                    });
-        });
+                    return Mono.zip(availabilityMono, fixtureMono)
+                            .flatMap(tuple -> {
+                                AvailabilityReportDto availability = tuple.getT1();
+                                FixtureDto fixture = tuple.getT2();
+                                return formAggregationService.computeFormComponents(playerId, fixture.getOpponentTeam())
+                                        .map(form -> ratingCalculator.compute(player, availability, fixture, form, request));
+                            });
+                });
     }
 }
