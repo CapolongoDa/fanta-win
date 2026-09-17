@@ -4,7 +4,7 @@ info:
   description: >-
     API REST B2B per la gestione della rosa su DynamoDB e il calcolo predittivo 
     della formazione ottimale di Fantacalcio (FantaClaude).
-  version: 2.13.0
+  version: 2.14.0
   x-api-id: fantaclaude-lineup-manager-api-b2b
   termsOfService: https://fantaclaude.ai/termini-di-servizio
   contact:
@@ -114,6 +114,10 @@ paths:
         Inserisce un nuovo calciatore o ne aggiorna le statistiche e lo stato corrente. Se rosterId
         non esiste ancora, viene creata una nuova rosa con questo id (assegnata al chiamante come
         proprietario, se l'autenticazione e' attiva) - usa il parametro teamName per darle un nome.
+        Il chiamante fornisce solo id, name, realTeam e position: status, nextOpponent,
+        startingProbability e recentScores non si inviano mai in richiesta, li calcola il server
+        da fonti esterne (disponibilita', calendario, storico voti - vedi RosterService#buildApiPlayer)
+        e compaiono solo nella risposta.
       operationId: addOrUpdatePlayer
       tags:
         - Roster
@@ -140,7 +144,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Player'
+              $ref: '#/components/schemas/AddOrUpdatePlayerRequest'
       responses:
         '200':
           description: Giocatore salvato con successo
@@ -1037,8 +1041,44 @@ components:
           items:
             $ref: '#/components/schemas/Player'
 
+    AddOrUpdatePlayerRequest:
+      type: object
+      description: >-
+        Corpo di POST /fanta-private/addPlayer/{rosterId}. Solo i dati anagrafici che il chiamante
+        conosce davvero: status, nextOpponent, startingProbability e recentScores NON fanno parte
+        di questo schema perche' non si inviano mai in richiesta, li calcola sempre il server da
+        fonti esterne (vedi Player, lo schema di risposta che li include).
+      required:
+        - id
+        - name
+        - realTeam
+        - position
+      properties:
+        id:
+          type: string
+          description: id del giocatore
+          example: PLAYER#inter_lautaro
+        name:
+          type: string
+          example: Lautaro Martinez
+        realTeam:
+          type: string
+          example: Inter
+        position:
+          type: string
+          enum: [POR, DIF, CEN, ATT]
+          example: ATT
+      example:
+        id: PLAYER#inter_lautaro
+        name: Lautaro Martinez
+        realTeam: Inter
+        position: ATT
+
     Player:
       type: object
+      description: >-
+        Vista completa di un calciatore in rosa, sempre generata dal server (vedi
+        AddOrUpdatePlayerRequest per cosa invece fornisce il chiamante in scrittura).
       required:
         - id
         - name
@@ -1069,11 +1109,16 @@ components:
           example: DISPONIBILE
         nextOpponent:
           type: string
+          nullable: true
+          description: Prossimo avversario reale, noto solo se il calendario e' stato sincronizzato per questa giornata
           example: Empoli
         startingProbability:
           type: number
           format: float
-          description: Probabilità di titolarità in percentuale (0-100)
+          nullable: true
+          description: >-
+            Probabilita' di titolarita' in percentuale (0-100), nota solo se la formazione ufficiale
+            e' stata sincronizzata (vedi /fanta-private/lineups/sync-official/{rosterId})
           example: 85.0
         recentScores:
           type: array

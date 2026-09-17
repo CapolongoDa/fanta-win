@@ -64,8 +64,10 @@ public class MatchFixtureLookupService {
         return Mono.zip(finishedMono, scheduledMono).flatMap(tuple -> {
             List<Match> allMatches = concat(tuple.getT1(), tuple.getT2());
 
+            // Un match con competition nulla (dato incompleto lato Football-Data.org) va scartato, non
+            // deve far esplodere con NullPointerException l'intera ricerca per tutte le altre partite.
             Optional<Match> found = allMatches.stream()
-                    .filter(m -> SERIE_A_COMPETITION_CODE.equals(Objects.requireNonNull(m.getCompetition()).getCode()))
+                    .filter(m -> m.getCompetition() != null && SERIE_A_COMPETITION_CODE.equals(m.getCompetition().getCode()))
                     .filter(m -> matchday.equals(m.getMatchday()))
                     .findFirst();
 

@@ -93,10 +93,13 @@ public class FootballDataSyncJob {
         ).flatMap(tuple -> {
             List<Match> allMatches = concat(tuple.getT1(), tuple.getT2());
 
+            // competition/utcDate nulli (dato incompleto lato Football-Data.org) vanno scartati, non
+            // devono far esplodere con NullPointerException l'intera sync della squadra.
             Match nextSerieA = allMatches.stream()
-                    .filter(m -> SERIE_A_COMPETITION_CODE.equals(Objects.requireNonNull(m.getCompetition()).getCode()))
+                    .filter(m -> m.getCompetition() != null && SERIE_A_COMPETITION_CODE.equals(m.getCompetition().getCode()))
                     .filter(m -> "SCHEDULED".equals(m.getStatus()))
-                    .min(Comparator.comparing(a -> Objects.requireNonNull(a.getUtcDate())))
+                    .filter(m -> m.getUtcDate() != null)
+                    .min(Comparator.comparing(Match::getUtcDate))
                     .orElse(null);
 
             if (nextSerieA == null) {
@@ -139,11 +142,14 @@ public class FootballDataSyncJob {
     private boolean hasMatchInWindow(List<Match> matches, OffsetDateTime reference,
                                      boolean before, java.util.function.Predicate<String> competitionFilter) {
         return matches.stream().anyMatch(m -> {
-            if (Objects.requireNonNull(m.getUtcDate()).equals(reference)) return false; // esclude la partita di riferimento stessa
+            // utcDate/competition nulli (dato incompleto lato Football-Data.org) escludono la partita dalla
+            // finestra invece di far esplodere con NullPointerException l'intera valutazione per la squadra.
+            if (m.getUtcDate() == null || m.getCompetition() == null) return false;
+            if (m.getUtcDate().equals(reference)) return false; // esclude la partita di riferimento stessa
             boolean inWindow = before
                     ? m.getUtcDate().isBefore(reference.toInstant()) && Duration.between(m.getUtcDate(), reference).compareTo(TURNOVER_WINDOW) <= 0
                     : m.getUtcDate().isAfter(reference.toInstant()) && Duration.between(reference, m.getUtcDate()).compareTo(TURNOVER_WINDOW) <= 0;
-            return inWindow && competitionFilter.test(Objects.requireNonNull(m.getCompetition()).getCode());
+            return inWindow && competitionFilter.test(m.getCompetition().getCode());
         });
     }
 

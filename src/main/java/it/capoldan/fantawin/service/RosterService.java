@@ -7,6 +7,7 @@ import it.capoldan.fantawin.exception.ForbiddenException;
 import it.capoldan.fantawin.exception.IdConflictException;
 import it.capoldan.fantawin.exception.NotFoundException;
 import it.capoldan.fantawin.exception.ValidationException;
+import it.capoldan.fantawin.generated.openapi.server.v1.dto.AddOrUpdatePlayerRequest;
 import it.capoldan.fantawin.generated.openapi.server.v1.dto.BulkAddPlayerEntry;
 import it.capoldan.fantawin.generated.openapi.server.v1.dto.BulkAddResult;
 import it.capoldan.fantawin.generated.openapi.server.v1.dto.BulkAddUnresolvedEntry;
@@ -45,10 +46,11 @@ public class RosterService {
             Role.ATT, 6
     );
 
-    /** Limite di entry per singola chiamata a addPlayersBulk (BulkAddRosterRequest.players, vedi
-     * OpenAPI maxItems) - indipendente dal cap per ruolo di ROSTER_SLOTS, che scatta comunque anche
-     * sotto questa soglia se un ruolo e' gia' al completo. */
-    private static final int MAX_BULK_ADD_ENTRIES = 25;
+    // Il limite di 25 entry per singola chiamata a addPlayersBulk e' dichiarato come maxItems su
+    // BulkAddRosterRequest.players nello spec OpenAPI: @Valid @RequestBody in RosterController lo fa
+    // gia' rispettare da Spring (via @Size generato sul DTO) prima che questo metodo venga anche solo
+    // invocato, quindi un secondo controllo qui era codice morto - indipendente dal cap per ruolo di
+    // ROSTER_SLOTS, che scatta comunque anche sotto questa soglia se un ruolo e' gia' al completo.
 
     private final RosterDao rosterDao;
     private final PlayerDao playerDao;
@@ -121,7 +123,7 @@ public class RosterService {
                 .collectMap(FixtureDto::getRealTeam, Function.identity());
     }
 
-    public Mono<Player> addOrUpdatePlayer(Player request, String rosterId, String teamName, Optional<String> callerId) {
+    public Mono<Player> addOrUpdatePlayer(AddOrUpdatePlayerRequest request, String rosterId, String teamName, Optional<String> callerId) {
         Role role = RosterRequestMapper.toRole(request);
         return addOrUpdatePlayerCore(request.getId(), request.getName(), request.getRealTeam(), role, rosterId, teamName, callerId);
     }
@@ -143,18 +145,6 @@ public class RosterService {
     public Mono<BulkAddResult> addPlayersBulk(List<BulkAddPlayerEntry> entries, String rosterId, String teamName, Optional<String> callerId) {
         log.info("Bulk-add di {} giocatori in rosterId={}", entries == null ? 0 : entries.size(), rosterId);
         List<BulkAddPlayerEntry> safeEntries = entries == null ? List.of() : entries;
-        if (safeEntries.size() > MAX_BULK_ADD_ENTRIES) {
-            log.warn("Bulk-add rifiutato per rosterId={}: {} giocatori richiesti, massimo {} per richiesta",
-                    rosterId, safeEntries.size(), MAX_BULK_ADD_ENTRIES);
-            return Mono.error(new ValidationException(
-                    "Troppi giocatori in una singola richiesta",
-                    List.of(ProblemError.builder()
-                            .code(ExceptionsCodes.ERROR_CODE_GENERIC_INVALIDPARAMETER)
-                            .element("players")
-                            .detail("players: " + safeEntries.size() + " elementi, massimo " + MAX_BULK_ADD_ENTRIES)
-                            .build()),
-                    null));
-        }
         return Flux.fromIterable(safeEntries)
                 .concatMap(entry -> resolveAndAddOne(entry, rosterId, teamName, callerId))
                 .collectList()
