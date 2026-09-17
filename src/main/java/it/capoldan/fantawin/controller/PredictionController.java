@@ -31,7 +31,7 @@ public class PredictionController {
                 .doOnNext(LineupFormationLogger::logFormation)
                 .doOnNext(response -> log.info("Richiesta POST /fanta-private/predict/lineup/{} completata: modulo={} punteggio={}",
                         rosterId, response.getWinningFormation(), response.getTotalExpectedScore()))
-                .map(response -> ResponseEntity.<Object>ok(response))
+                .map(ResponseEntity::<Object>ok)
                 .doOnError(ex -> log.warn("Richiesta POST /fanta-private/predict/lineup/{} fallita", rosterId, ex));
     }
 }
