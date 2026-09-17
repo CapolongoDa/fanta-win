@@ -130,21 +130,20 @@
 							}
 						],
 						"url": {
-							"raw": "{{baseUrl}}/fanta-private/addPlayers/{{rosterId}}",
+							"raw": "{{baseUrl}}/fanta-private/addPlayers",
 							"host": [
 								"{{baseUrl}}"
 							],
 							"path": [
 								"fanta-private",
-								"addPlayers",
-								"{{rosterId}}"
+								"addPlayers"
 							]
 						},
 						"body": {
 							"mode": "raw",
-							"raw": "[\n  {\n    \"nome\": \"Oyono A.\",\n    \"ruolo\": \"DIF\"\n  },\n  {\n    \"nome\": \"Thuram\",\n    \"ruolo\": \"A\"\n  }\n]"
+							"raw": "{\n  \"rosterId\": \"{{rosterId}}\",\n  \"players\": [\n    {\n      \"nome\": \"Oyono A.\",\n      \"ruolo\": \"DIF\"\n    },\n    {\n      \"nome\": \"Thuram\",\n      \"ruolo\": \"A\"\n    }\n  ]\n}"
 						},
-						"description": "Aggiunge in blocco piu' giocatori alla rosa a partire da nome+ruolo (nessun id da inventare): ognuno viene risolto contro l'anagrafica PlayerCatalog (vedi cartella Player Catalog). Ruolo accetta sia P/D/C/A che POR/DIF/CEN/ATT. Le entry non risolvibili (ruolo sconosciuto, nessun match, o nome ambiguo tra piu' giocatori con lo stesso ruolo) non bloccano le altre, finiscono in 'unresolved' con il motivo."
+						"description": "Aggiunge in blocco piu' giocatori a una rosa a partire da rosterId + nome+ruolo (nessun id da inventare): ognuno viene risolto contro l'anagrafica PlayerCatalog (vedi cartella Player Catalog). Se rosterId non esiste ancora, viene creata una nuova rosa. Ruolo accetta sia P/D/C/A che POR/DIF/CEN/ATT. Le entry non risolvibili (ruolo sconosciuto, nessun match, o nome ambiguo tra piu' giocatori con lo stesso ruolo) non bloccano le altre, finiscono in 'unresolved' con il motivo. Massimo 25 giocatori per richiesta."
 					}
 				},
 				{

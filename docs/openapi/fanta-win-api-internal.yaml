@@ -4,7 +4,7 @@ info:
   description: >-
     API REST B2B per la gestione della rosa su DynamoDB e il calcolo predittivo 
     della formazione ottimale di Fantacalcio (FantaClaude).
-  version: 2.9.0
+  version: 2.10.0
   x-api-id: fantaclaude-lineup-manager-api-b2b
   termsOfService: https://fantaclaude.ai/termini-di-servizio
   contact:
@@ -162,36 +162,29 @@ paths:
               schema:
                 $ref: 'problem-internal.yaml#/components/schemas/Problem'
 
-  /fanta-private/addPlayers/{rosterId}:
+  /fanta-private/addPlayers:
     post:
-      summary: Aggiunge in blocco piu' giocatori alla rosa risolvendoli dal catalogo Serie A
+      summary: Aggiunge in blocco piu' giocatori a una rosa risolvendoli dal catalogo Serie A
       description: >
-        Riceve una lista di {nome, ruolo} come li scrive l'utente (es. "Oyono A.", DIF) e risolve
-        ciascuno contro l'anagrafica completa di Serie A (PlayerCatalog, tag PlayerCatalog) per
-        ricavarne l'id univoco: l'id non viene mai fornito dal chiamante. Una entry con ruolo non
+        Riceve un rosterId e una lista di {nome, ruolo} come li scrive l'utente (es. "Oyono A.",
+        DIF) e risolve ciascuno contro l'anagrafica completa di Serie A (PlayerCatalog, tag
+        PlayerCatalog) per ricavarne l'id univoco: l'id non viene mai fornito dal chiamante. Se il
+        rosterId non corrisponde a nessuna rosa esistente, ne viene creata una nuova (assegnata al
+        chiamante come proprietario, se l'autenticazione e' attiva). Una entry con ruolo non
         riconosciuto, senza corrispondenza, o con nome ambiguo (piu' giocatori con lo stesso ruolo e
         nome simile, es. "Oyono" senza suffisso) non blocca le altre e viene riportata in
         "unresolved" col motivo. I giocatori risolti vengono aggiunti riusando lo stesso controllo di
-        capienza per ruolo (ROSTER_SLOTS) di /fanta-private/addPlayer/{rosterId}.
+        capienza per ruolo (ROSTER_SLOTS) di /fanta-private/addPlayer/{rosterId}; la richiesta nel
+        suo complesso e' inoltre limitata a un massimo di 25 giocatori (vedi BulkAddRosterRequest).
       operationId: addPlayersBulk
       tags:
         - Roster
-      parameters:
-        - name: rosterId
-          in: path
-          required: true
-          description: id della squadra del fantacalcio
-          schema:
-            type: string
-            example: junior
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: array
-              items:
-                $ref: '#/components/schemas/BulkAddPlayerEntry'
+              $ref: '#/components/schemas/BulkAddRosterRequest'
       responses:
         '200':
           description: Elaborazione completata (anche parzialmente, vedi unresolved)
@@ -206,7 +199,7 @@ paths:
               schema:
                 $ref: 'problem-internal.yaml#/components/schemas/Problem'
         '400':
-          description: Corpo della richiesta assente o non valido
+          description: Corpo della richiesta assente o non valido, o piu' di 25 giocatori in un'unica richiesta
           content:
             application/json:
               schema:
@@ -530,7 +523,7 @@ paths:
       description: >
         Carica un file CSV con id, nome, ruolo e squadra di TUTTI i calciatori di Serie A (fonte:
         quotazioni fantacalcio.it), usato per popolare/aggiornare PlayerCatalog. Questa anagrafica e'
-        poi usata da /fanta-private/addPlayers/{rosterId} per risolvere nome+ruolo in un id quando si
+        poi usata da /fanta-private/addPlayers per risolvere nome+ruolo in un id quando si
         aggiunge un giocatore alla rosa. Formato atteso, separatore ';', UTF-8, intestazione su prima
         riga: id;nome;ruolo;squadra. Ruolo accetta sia P/D/C/A che POR/DIF/CEN/ATT. Le righe non
         risolvibili non bloccano l'import ma vengono riportate in errors.
@@ -633,6 +626,37 @@ components:
       example:
         nome: Oyono A.
         ruolo: DIF
+
+    BulkAddRosterRequest:
+      type: object
+      required:
+        - rosterId
+        - players
+      properties:
+        rosterId:
+          type: string
+          description: >-
+            Id della rosa a cui aggiungere i giocatori. Se non esiste ancora, viene creata una
+            nuova rosa con questo id (assegnata al chiamante come proprietario, se l'autenticazione
+            e' attiva - vedi SecurityConfig).
+          example: nuova-squadra
+        players:
+          type: array
+          description: >-
+            Elenco dei giocatori da aggiungere (nome + ruolo, risolti contro l'anagrafica
+            PlayerCatalog - vedi BulkAddPlayerEntry). Massimo 25 elementi per richiesta: la rosa
+            nel suo complesso resta comunque vincolata a 3 POR + 8 DIF + 8 CEN + 6 ATT = 25
+            giocatori totali (vedi ROSTER_SLOTS).
+          items:
+            $ref: '#/components/schemas/BulkAddPlayerEntry'
+          maxItems: 25
+      example:
+        rosterId: nuova-squadra
+        players:
+          - nome: Oyono A.
+            ruolo: DIF
+          - nome: Thuram
+            ruolo: A
 
     BulkAddResult:
       type: object

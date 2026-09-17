@@ -76,9 +76,6 @@ create_table "$MATCH_STATS_TABLE" playerId S matchday N
 create_table "$FIXTURES_TABLE" matchday N realTeam S
 create_table "$AVAILABILITY_TABLE" playerId S
 create_table "$ROSTER_TABLE" rosterId S
-# PlayerCatalog resta vuota qui: 500+ giocatori, popolata via POST /fanta-private/playercatalog/import
-# (vedi Postman "Player Catalog > Import Player Catalog (CSV)") col CSV esportato dalle quotazioni
-# fantacalcio.it, non seminata a mano come le altre tabelle.
 create_table "$PLAYER_CATALOG_TABLE" catalogId S
 
 # ---------------------------------------------------------------------------------------------
@@ -255,6 +252,49 @@ ddb put-item --table-name "$AVAILABILITY_TABLE" --item '{
   "playerId": {"S": "ndicka"}, "status": {"S": "IN_DUBBIO"}
 }' >/dev/null
 echo "5 stati disponibilita' inseriti (gli altri 20 giocatori restano di default OK/100% - nessuna riga necessaria)."
+
+# ---------------------------------------------------------------------------------------------
+# 6) Anagrafica completa Serie A (PlayerCatalog) - da CSV committato nel repo
+# ---------------------------------------------------------------------------------------------
+# Usata da PlayerCatalogResolverService per risolvere nome+ruolo -> catalogId quando si aggiunge
+# un giocatore alla rosa (vedi POST /fanta-private/addPlayers). Il CSV e' lo stesso esportabile
+# dalle quotazioni fantacalcio.it e caricabile anche via POST /fanta-private/playercatalog/import
+# (Postman "Player Catalog > Import Player Catalog (CSV)") - qui lo seminiamo direttamente in
+# DynamoDB per non dipendere dall'app in esecuzione durante il setup locale.
+#
+# aws dynamodb batch-write-item (blocchi da 25, il massimo consentito) invece di un put-item per
+# riga: con 500+ giocatori, un put-item alla volta richiederebbe centinaia di round-trip CLI.
+# jq costruisce il JSON di ogni riga (gestisce correttamente nomi con apici, es. "N'Dicka",
+# "N'Dri" - impossibile con la concatenazione di stringhe bash usata da put_player/put_stat: un
+# apice nel valore chiuderebbe prematuramente la stringa bash in single-quote).
+
+PLAYER_CATALOG_CSV="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/data/player-catalog-serie-a-2026-27.csv"
+
+echo "=== 6) Seed $PLAYER_CATALOG_TABLE da CSV ==="
+if [ ! -f "$PLAYER_CATALOG_CSV" ]; then
+  echo "[skip] CSV catalogo non trovato in $PLAYER_CATALOG_CSV: $PLAYER_CATALOG_TABLE resta vuota"
+  echo "       (importala via POST /fanta-private/playercatalog/import, vedi Postman)."
+elif ! command -v jq >/dev/null 2>&1; then
+  echo "[skip] 'jq' non installato: $PLAYER_CATALOG_TABLE resta vuota"
+  echo "       (importala via POST /fanta-private/playercatalog/import, vedi Postman, oppure installa jq e rilancia)."
+else
+  put_requests_json="$(tail -n +2 "$PLAYER_CATALOG_CSV" | tr -d '\r' | while IFS=';' read -r cid nome ruolo squadra; do
+    [ -z "$cid" ] && continue
+    jq -nc --arg cid "$cid" --arg nome "$nome" --arg ruolo "$ruolo" --arg squadra "$squadra" \
+      '{PutRequest:{Item:{catalogId:{S:$cid},nome:{S:$nome},ruolo:{S:$ruolo},squadra:{S:$squadra}}}}'
+  done | jq -s '.')"
+
+  total=$(echo "$put_requests_json" | jq 'length')
+  echo "$total giocatori da caricare (blocchi da 25 via batch-write-item)..."
+
+  batches=$(( (total + 24) / 25 ))
+  for ((b = 0; b < batches; b++)); do
+    start=$((b * 25))
+    chunk=$(echo "$put_requests_json" | jq --argjson start "$start" '.[$start:$start+25]')
+    ddb batch-write-item --request-items "{\"$PLAYER_CATALOG_TABLE\": $chunk}" >/dev/null
+  done
+  echo "$total giocatori caricati in $PLAYER_CATALOG_TABLE."
+fi
 
 echo
 echo "=== Fatto. ==="
