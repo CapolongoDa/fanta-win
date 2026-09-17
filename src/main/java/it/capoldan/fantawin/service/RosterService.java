@@ -7,6 +7,7 @@ import it.capoldan.fantawin.exception.ForbiddenException;
 import it.capoldan.fantawin.exception.IdConflictException;
 import it.capoldan.fantawin.exception.NotFoundException;
 import it.capoldan.fantawin.exception.ValidationException;
+import it.capoldan.fantawin.generated.openapi.server.v1.dto.AddOrUpdatePlayerRequest;
 import it.capoldan.fantawin.generated.openapi.server.v1.dto.BulkAddPlayerEntry;
 import it.capoldan.fantawin.generated.openapi.server.v1.dto.BulkAddResult;
 import it.capoldan.fantawin.generated.openapi.server.v1.dto.BulkAddUnresolvedEntry;
@@ -121,7 +122,7 @@ public class RosterService {
                 .collectMap(FixtureDto::getRealTeam, Function.identity());
     }
 
-    public Mono<Player> addOrUpdatePlayer(Player request, String rosterId, String teamName, Optional<String> callerId) {
+    public Mono<Player> addOrUpdatePlayer(AddOrUpdatePlayerRequest request, String rosterId, String teamName, Optional<String> callerId) {
         Role role = RosterRequestMapper.toRole(request);
         return addOrUpdatePlayerCore(request.getId(), request.getName(), request.getRealTeam(), role, rosterId, teamName, callerId);
     }

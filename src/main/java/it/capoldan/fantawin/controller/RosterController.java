@@ -1,7 +1,7 @@
 package it.capoldan.fantawin.controller;
 
+import it.capoldan.fantawin.generated.openapi.server.v1.dto.AddOrUpdatePlayerRequest;
 import it.capoldan.fantawin.generated.openapi.server.v1.dto.BulkAddRosterRequest;
-import it.capoldan.fantawin.generated.openapi.server.v1.dto.Player;
 import it.capoldan.fantawin.security.AuthenticatedUserProvider;
 import it.capoldan.fantawin.service.RosterService;
 import jakarta.validation.Valid;
@@ -57,7 +57,7 @@ public class RosterController {
     @PostMapping(value = "/fanta-private/addPlayer/{rosterId}", consumes = "application/json", produces = "application/json")
     public Mono<ResponseEntity<Object>> addOrUpdatePlayer(@PathVariable("rosterId") String rosterId,
                                                             @RequestParam(value = "teamName", required = false) String teamName,
-                                                            @Valid @RequestBody Mono<Player> player) {
+                                                            @Valid @RequestBody Mono<AddOrUpdatePlayerRequest> player) {
         log.info("Richiesta POST /fanta-private/addPlayer/{} teamName={} ricevuta", rosterId, teamName);
         return player.zipWith(authenticatedUserProvider.currentUserId())
                 .flatMap(tuple -> rosterService.addOrUpdatePlayer(tuple.getT1(), rosterId, teamName, tuple.getT2()))
