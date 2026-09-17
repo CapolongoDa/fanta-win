@@ -98,6 +98,15 @@
             <version>${jackson-databind-nullable.version}</version>
         </dependency>
 
+        <!-- OAuth2 Resource Server: valida i JWT emessi da Cognito (Hosted UI) sulle richieste alle
+             API - vedi SecurityConfig. Se spring.security.oauth2.resourceserver.jwt.issuer-uri non e'
+             configurato, SecurityConfig lascia tutto aperto (comportamento attuale), quindi aggiungere
+             questa dipendenza NON attiva da sola l'autenticazione. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-oauth2-resource-server</artifactId>
+        </dependency>
+
         <!-- AWS DynamoDB Enhanced Async -->
         <dependency>
             <groupId>software.amazon.awssdk</groupId>
