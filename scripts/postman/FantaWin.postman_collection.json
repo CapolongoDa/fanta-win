@@ -93,6 +93,38 @@
 					}
 				},
 				{
+					"name": "Bulk Add Players",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/fanta-private/addPlayers/{{rosterId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"fanta-private",
+								"addPlayers",
+								"{{rosterId}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "[\n  {\n    \"nome\": \"Oyono A.\",\n    \"ruolo\": \"DIF\"\n  },\n  {\n    \"nome\": \"Thuram\",\n    \"ruolo\": \"A\"\n  }\n]"
+						},
+						"description": "Aggiunge in blocco piu' giocatori alla rosa a partire da nome+ruolo (nessun id da inventare): ognuno viene risolto contro l'anagrafica PlayerCatalog (vedi cartella Player Catalog). Ruolo accetta sia P/D/C/A che POR/DIF/CEN/ATT. Le entry non risolvibili (ruolo sconosciuto, nessun match, o nome ambiguo tra piu' giocatori con lo stesso ruolo) non bloccano le altre, finiscono in 'unresolved' con il motivo."
+					}
+				},
+				{
 					"name": "Delete Player",
 					"request": {
 						"method": "DELETE",
@@ -180,6 +212,72 @@
 							]
 						},
 						"description": "Interroga Football-Data.org (stesso client esterno della sync Fixtures) per il vero avversario/casa-trasferta/data di realTeam alla giornata indicata: utile per verificare/prefillare a mano il CSV di import prima di compilarlo."
+					}
+				},
+				{
+					"name": "Sync Real Match Stats (SportMonks)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/fanta-private/matchstats/sync-real/{{rosterId}}/{{matchday}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"fanta-private",
+								"matchstats",
+								"sync-real",
+								"{{rosterId}}",
+								"{{matchday}}"
+							]
+						},
+						"description": "Legge da SportMonks (endpoint /rounds/seasons/{seasonId}, include=fixtures.events;fixtures.participants) gli eventi oggettivi reali della giornata indicata - gol, assist, ammonizioni, espulsioni e gol subiti per portieri/difensori - e li scrive su PlayerMatchStat per ogni giocatore in rosa, ricalcolando il fantavoto. Il voto (pagella) non viene toccato: resta quello gia' presente o vuoto se non ancora inserito manualmente. Scrive anche un export CSV per-rosterId in fantawin.match-stats-export-dir. Richiede fantawin.sportmonks-serie-a-season-id valorizzato."
+					}
+				}
+			]
+		},
+		{
+			"name": "Player Catalog",
+			"item": [
+				{
+					"name": "Import Player Catalog (CSV)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/fanta-private/playercatalog/import",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"fanta-private",
+								"playercatalog",
+								"import"
+							]
+						},
+						"body": {
+							"mode": "formdata",
+							"formdata": [
+								{
+									"key": "file",
+									"type": "file",
+									"src": [],
+									"description": "CSV separato da ';', UTF-8, intestazione: id;nome;ruolo;squadra (tutte obbligatorie). Esportato dalle quotazioni fantacalcio.it. Seleziona qui il file dal tuo computer prima di inviare."
+								}
+							]
+						},
+						"description": "Importa/aggiorna l'anagrafica completa di Serie A (PlayerCatalog), usata da 'Roster > Bulk Add Players' per risolvere nome+ruolo in un id. Da rilanciare ad ogni nuova stagione o quando cambiano le quotazioni. Righe con ruolo non riconosciuto non bloccano l'import, finiscono in 'errors'."
 					}
 				}
 			]

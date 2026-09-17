@@ -4,7 +4,7 @@ info:
   description: >-
     API REST B2B per la gestione della rosa su DynamoDB e il calcolo predittivo 
     della formazione ottimale di Fantacalcio (FantaClaude).
-  version: 2.6.0
+  version: 2.8.0
   x-api-id: fantaclaude-lineup-manager-api-b2b
   termsOfService: https://fantaclaude.ai/termini-di-servizio
   contact:
@@ -23,6 +23,8 @@ tags:
     description: Calcolo predittivo dell'undici titolare, della panchina e del modulo ideale
   - name: MatchStats
     description: Import delle statistiche di giornata (voto/bonus/malus) dei calciatori
+  - name: PlayerCatalog
+    description: Anagrafica completa dei calciatori di Serie A (quotazioni fantacalcio.it), usata per risolvere nome+ruolo in un id univoco quando si aggiunge un giocatore alla rosa
 
 paths:
   /fanta-private/getRoster/{rosterId}:
@@ -109,6 +111,56 @@ paths:
           description: >-
             Conflitto: slot del ruolo gia' al completo, oppure il giocatore e' stato modificato da
             un'altra richiesta nel frattempo (controllo di versione ottimistico)
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
+        '503':
+          description: Storage DynamoDB temporaneamente non raggiungibile
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
+
+  /fanta-private/addPlayers/{rosterId}:
+    post:
+      summary: Aggiunge in blocco piu' giocatori alla rosa risolvendoli dal catalogo Serie A
+      description: >
+        Riceve una lista di {nome, ruolo} come li scrive l'utente (es. "Oyono A.", DIF) e risolve
+        ciascuno contro l'anagrafica completa di Serie A (PlayerCatalog, tag PlayerCatalog) per
+        ricavarne l'id univoco: l'id non viene mai fornito dal chiamante. Una entry con ruolo non
+        riconosciuto, senza corrispondenza, o con nome ambiguo (piu' giocatori con lo stesso ruolo e
+        nome simile, es. "Oyono" senza suffisso) non blocca le altre e viene riportata in
+        "unresolved" col motivo. I giocatori risolti vengono aggiunti riusando lo stesso controllo di
+        capienza per ruolo (ROSTER_SLOTS) di /fanta-private/addPlayer/{rosterId}.
+      operationId: addPlayersBulk
+      tags:
+        - Roster
+      parameters:
+        - name: rosterId
+          in: path
+          required: true
+          description: id della squadra del fantacalcio
+          schema:
+            type: string
+            example: junior
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '#/components/schemas/BulkAddPlayerEntry'
+      responses:
+        '200':
+          description: Elaborazione completata (anche parzialmente, vedi unresolved)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BulkAddResult'
+        '400':
+          description: Corpo della richiesta assente o non valido
           content:
             application/json:
               schema:
@@ -312,6 +364,63 @@ paths:
               schema:
                 $ref: 'problem-internal.yaml#/components/schemas/Problem'
 
+  /fanta-private/matchstats/sync-real/{rosterId}/{matchday}:
+    post:
+      summary: Sincronizza da SportMonks gol/assist/cartellini/gol-subiti reali di una giornata
+      description: >
+        Per ogni giocatore in rosa, legge da SportMonks (endpoint /rounds/seasons/{seasonId}, un'unica
+        chiamata per l'intera giornata) gli eventi oggettivi della partita della sua squadra reale in
+        quella giornata: gol, assist (related_player_id sull'evento Goal), ammonizioni, espulsioni e,
+        per portieri/difensori, gol subiti dalla squadra. Il voto (pagella) NON viene toccato: resta
+        quello gia' presente (manuale, es. da /fanta-private/matchstats/import) o vuoto se il giocatore
+        non ha ancora un voto per questa giornata - in quel caso fantavoto resta vuoto finche' il voto
+        non viene valorizzato. Se la riga PlayerMatchStat per playerId+giornata non esiste ancora viene
+        creata. Richiede fantawin.sportmonks-serie-a-season-id configurato. Al termine scrive anche un
+        export CSV con lo storico corrente del roster in fantawin.match-stats-export-dir.
+      operationId: syncRealMatchStats
+      tags:
+        - MatchStats
+      parameters:
+        - name: rosterId
+          in: path
+          required: true
+          description: id della squadra del fantacalcio
+          schema:
+            type: string
+            example: junior
+        - name: matchday
+          in: path
+          required: true
+          description: numero di giornata di Serie A da sincronizzare
+          schema:
+            type: integer
+            example: 5
+      responses:
+        '200':
+          description: Sincronizzazione eseguita (anche se qualche partita non e' stata trovata)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MatchStatsSyncResult'
+        '404':
+          description: Rosa non trovata
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
+        '500':
+          description: Internal server error (es. fantawin.sportmonks-serie-a-season-id non configurato)
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
+        '503':
+          description: SportMonks temporaneamente non raggiungibile
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
+
   /fanta-private/predict/lineup/{rosterId}:
     post:
       summary: Calcola l'undici titolare e la panchina ottimale per la giornata
@@ -363,8 +472,137 @@ paths:
               schema:
                 $ref: 'problem-internal.yaml#/components/schemas/Problem'
 
+  /fanta-private/playercatalog/import:
+    post:
+      summary: Importa l'anagrafica completa di Serie A da file CSV (quotazioni fantacalcio.it)
+      description: >
+        Carica un file CSV con id, nome, ruolo e squadra di TUTTI i calciatori di Serie A (fonte:
+        quotazioni fantacalcio.it), usato per popolare/aggiornare PlayerCatalog. Questa anagrafica e'
+        poi usata da /fanta-private/addPlayers/{rosterId} per risolvere nome+ruolo in un id quando si
+        aggiunge un giocatore alla rosa. Formato atteso, separatore ';', UTF-8, intestazione su prima
+        riga: id;nome;ruolo;squadra. Ruolo accetta sia P/D/C/A che POR/DIF/CEN/ATT. Le righe non
+        risolvibili non bloccano l'import ma vengono riportate in errors.
+      operationId: importPlayerCatalog
+      tags:
+        - PlayerCatalog
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+                  description: File CSV con l'anagrafica completa di Serie A
+      responses:
+        '200':
+          description: Import completato (anche parzialmente, vedi errors)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerCatalogImportResult'
+        '400':
+          description: File assente o non leggibile come CSV
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
+        '503':
+          description: Storage DynamoDB temporaneamente non raggiungibile
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
+
 components:
   schemas:
+    PlayerCatalogImportResult:
+      type: object
+      required:
+        - imported
+        - skipped
+        - errors
+      properties:
+        imported:
+          type: integer
+          description: Numero di righe importate/aggiornate con successo in PlayerCatalog
+          example: 516
+        skipped:
+          type: integer
+          description: Numero di righe scartate (ruolo non riconosciuto o riga non valida)
+          example: 0
+        errors:
+          type: array
+          description: Dettaglio delle righe scartate, con numero di riga e motivo
+          items:
+            type: string
+          example: ["riga 12: ruolo non riconosciuto: 'X' (attesi P/D/C/A o POR/DIF/CEN/ATT)"]
+
+    BulkAddPlayerEntry:
+      type: object
+      required:
+        - nome
+        - ruolo
+      properties:
+        nome:
+          type: string
+          description: >-
+            Nome del calciatore come in anagrafica fantacalcio.it (PlayerCatalog). Se il cognome e'
+            condiviso da piu' giocatori nello stesso ruolo, usa il nome esatto col suffisso
+            disambiguante (es. "Oyono A." invece di "Oyono").
+          example: Oyono A.
+        ruolo:
+          type: string
+          description: Ruolo del calciatore, sigla classica (P/D/C/A) o spelling completo (POR/DIF/CEN/ATT)
+          example: DIF
+      example:
+        nome: Oyono A.
+        ruolo: DIF
+
+    BulkAddResult:
+      type: object
+      required:
+        - added
+        - unresolved
+      properties:
+        added:
+          type: array
+          description: Giocatori risolti e aggiunti con successo alla rosa
+          items:
+            $ref: '#/components/schemas/Player'
+        unresolved:
+          type: array
+          description: Entry non risolvibili (ruolo non riconosciuto, nessun match, o nome ambiguo), con il motivo
+          items:
+            $ref: '#/components/schemas/BulkAddUnresolvedEntry'
+
+    BulkAddUnresolvedEntry:
+      type: object
+      required:
+        - nome
+        - ruolo
+        - motivo
+      properties:
+        nome:
+          type: string
+          example: Oyono
+        ruolo:
+          type: string
+          example: DIF
+        motivo:
+          type: string
+          example: "nome ambiguo, possibili corrispondenze: Oyono A. (Frosinone), Oyono J. (Frosinone) - ripeti specificando il nome esatto come in anagrafica"
+
     MatchStatsImportResult:
       type: object
       required:
@@ -431,6 +669,63 @@ components:
           type: number
           format: double
           example: 100.0
+
+    MatchStatsSyncResult:
+      type: object
+      required:
+        - updatedPlayers
+        - unresolvedTeams
+      properties:
+        updatedPlayers:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlayerMatchStatUpdate'
+        unresolvedTeams:
+          type: array
+          description: >-
+            Squadre reali per cui non e' stato possibile trovare la fixture di questa giornata su
+            SportMonks (round non trovato, fixture ambigua/assente o nome squadra non risolto tra i
+            participants)
+          items:
+            type: string
+          example: [Milan]
+
+    PlayerMatchStatUpdate:
+      type: object
+      required:
+        - playerId
+        - name
+        - realTeam
+        - gol
+        - assist
+        - ammonizioni
+        - espulsioni
+      properties:
+        playerId:
+          type: string
+        name:
+          type: string
+          example: Barella
+        realTeam:
+          type: string
+          example: Inter
+        gol:
+          type: integer
+        assist:
+          type: integer
+        ammonizioni:
+          type: integer
+        espulsioni:
+          type: integer
+        golSubiti:
+          type: integer
+          nullable: true
+          description: Valorizzato solo per portieri/difensori
+        fantavoto:
+          type: number
+          format: double
+          nullable: true
+          description: Null se il voto non e' ancora stato inserito manualmente per questa giornata
 
     FixtureLookupResult:
       type: object

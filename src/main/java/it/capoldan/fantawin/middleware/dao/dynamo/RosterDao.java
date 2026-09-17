@@ -5,6 +5,7 @@ import it.capoldan.fantawin.middleware.dao.dynamo.entity.RosterEntity;
 import it.capoldan.fantawin.middleware.dao.dynamo.mapper.RosterEntityMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Repository;
+import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import software.amazon.awssdk.enhanced.dynamodb.DynamoDbAsyncTable;
 import software.amazon.awssdk.enhanced.dynamodb.Key;
@@ -26,6 +27,14 @@ public class RosterDao implements BaseDao<RosterDto> {
         return Mono.fromFuture(table.getItem(key))
                 .map(RosterEntityMapper::toDto)
                 .doOnError(ex -> log.warn("Errore nel recupero di Roster per rosterId={}", rosterId, ex));
+    }
+
+    /** Tutte le rose esistenti: usato dallo scheduler di RealMatchStatsSyncService per sincronizzare ogni lega. */
+    public Flux<RosterDto> findAll() {
+        return Flux.from(table.scan().items())
+                .doOnNext(item -> log.info("Trovato Roster rosterId={}", item.getRosterId()))
+                .map(RosterEntityMapper::toDto)
+                .doOnError(ex -> log.warn("Errore durante lo scan della tabella Roster", ex));
     }
 
     @Override

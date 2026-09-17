@@ -74,4 +74,15 @@ public class DynamoDbTablesConfig {
                 TableSchema.fromBean(RosterEntity.class)
         );
     }
+
+    @Bean
+    public DynamoDbAsyncTable<PlayerCatalogEntity> playerCatalogTable(
+            DynamoDbEnhancedAsyncClient client,
+            FantaWinConfigs props) {
+
+        return client.table(
+                props.getDao().getPlayerCatalogTableName(),
+                TableSchema.fromBean(PlayerCatalogEntity.class)
+        );
+    }
 }

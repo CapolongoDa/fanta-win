@@ -34,6 +34,7 @@ MATCH_STATS_TABLE="PlayerMatchStats"
 FIXTURES_TABLE="Fixtures"
 AVAILABILITY_TABLE="AvailabilityReports"
 ROSTER_TABLE="Roster"
+PLAYER_CATALOG_TABLE="PlayerCatalog"
 
 ddb() {
   aws dynamodb --endpoint-url "$ENDPOINT_URL" --region "$REGION" "$@"
@@ -75,6 +76,10 @@ create_table "$MATCH_STATS_TABLE" playerId S matchday N
 create_table "$FIXTURES_TABLE" matchday N realTeam S
 create_table "$AVAILABILITY_TABLE" playerId S
 create_table "$ROSTER_TABLE" rosterId S
+# PlayerCatalog resta vuota qui: 500+ giocatori, popolata via POST /fanta-private/playercatalog/import
+# (vedi Postman "Player Catalog > Import Player Catalog (CSV)") col CSV esportato dalle quotazioni
+# fantacalcio.it, non seminata a mano come le altre tabelle.
+create_table "$PLAYER_CATALOG_TABLE" catalogId S
 
 # ---------------------------------------------------------------------------------------------
 # 2) Anagrafica giocatori (Players) - rosa reale "AS Junior."
@@ -166,6 +171,9 @@ echo "Roster 'as-junior' inserito."
 
 put_stat() {
   local player_id="$1" matchday="$2" opponent="$3" home="$4" voto="$5"
+  local gol="${6:-0}" assist="${7:-0}" ammonizioni="${8:-0}" espulsioni="${9:-0}" golsubiti="${10:-0}"
+  local fantavoto
+  fantavoto=$(echo "scale=2; $voto + ($gol * 3) + ($assist * 1) - ($golsubiti * 1) - ($ammonizioni * 0.5) - ($espulsioni * 1)" | bc)
   ddb put-item --table-name "$MATCH_STATS_TABLE" --item '{
     "playerId": {"S": "'"$player_id"'"},
     "matchday": {"N": "'"$matchday"'"},
@@ -173,42 +181,54 @@ put_stat() {
     "opponentTeam": {"S": "'"$opponent"'"},
     "home": {"BOOL": '"$home"'},
     "voto": {"N": "'"$voto"'"},
-    "fantavoto": {"N": "'"$voto"'"}
+    "fantavoto": {"N": "'"$fantavoto"'"},
+    "gol": {"N": "'"$gol"'"},
+    "assist": {"N": "'"$assist"'"},
+    "ammonizioni": {"N": "'"$ammonizioni"'"},
+    "espulsioni": {"N": "'"$espulsioni"'"},
+    "golSubiti": {"N": "'"$golsubiti"'"}
   }' >/dev/null
 }
 
 echo "=== 4) Seed $MATCH_STATS_TABLE ==="
-# Giornata 4
-put_stat barella      4 Inter    true  7.5
-put_stat davis        4 Udinese  false 6.5
-put_stat perri        4 Torino   true  5.5
-put_stat comuzzo      4 Torino   true  5.5
-put_stat vlasic       4 Torino   true  5.5
-put_stat simeone      4 Torino   true  8.5
-put_stat molina       4 Roma     false 6.0
-put_stat kone         4 Roma     false 6.0
-put_stat dilorenzo    4 Napoli   true  9.0
-put_stat spinazzola   4 Napoli   true  6.5
-put_stat pinamonti    4 Lazio    true  8.5
-put_stat modric       4 Milan    false 9.5
-put_stat ederson      4 Atalanta true  5.5
-put_stat deketelaere  4 Atalanta true  5.0
-put_stat lauriente    4 Sassuolo true  6.5
-put_stat bremer       4 Juventus false 5.0
-put_stat ostigard     4 Genoa    true  6.0
+# Giornata 4 (avversari corretti: lo script portava per errore la squadra del giocatore
+# stesso al posto del vero avversario - bug non presente nelle giornate 2-3; voti verificati
+# via pagelle reali 11-14/09/2026, vedi commit per fonti)
+put_stat barella      4 Udinese  true  7.5
+put_stat davis        4 Inter    false 6.5 0 1 1 0 0
+put_stat perri        4 Roma     true  5.0 0 0 0 0 2
+put_stat comuzzo      4 Roma     true  5.5 0 0 0 0 2
+put_stat vlasic       4 Roma     true  5.0
+put_stat simeone      4 Roma     true  5.0
+put_stat molina       4 Torino   false 6.0
+put_stat kone         4 Torino   false 6.5
+put_stat ndicka       4 Torino   false 7.0
+put_stat soule        4 Torino   false 6.0
+put_stat dilorenzo    4 Bologna  true  6.0
+put_stat spinazzola   4 Bologna  true  6.5
+put_stat pinamonti    4 Milan    true  4.5
+put_stat modric       4 Lazio    false 4.5
+put_stat ederson      4 Cagliari true  5.0
+put_stat deketelaere  4 Cagliari true  6.0
+put_stat lauriente    4 Juventus true  6.5
+put_stat bremer       4 Sassuolo false 5.0 0 0 0 0 3
+put_stat ostigard     4 Frosinone true 6.0 0 0 0 0 1
+# Skorupski NON gioca in giornata 4 (esce dai convocati per un ritardo alla riunione tecnica,
+# gioca il vice Pessina): nessuna riga, "Senza Voto" e' corretto qui, non un dato mancante.
 # Giornata 3
 put_stat ndicka       3 Atalanta true  5.5
 put_stat molina       3 Atalanta true  6.0
 put_stat kone         3 Atalanta true  6.0
-put_stat soule        3 Atalanta true  8.5
-put_stat ederson      3 Roma     false 7.0
+put_stat soule        3 Atalanta true  8.5 1 0 0 0 0
+put_stat ederson      3 Roma     false 7.0 1 0 0 0 0
 put_stat deketelaere  3 Roma     false 6.0
 put_stat skorupski    3 Sassuolo true  7.5
+put_stat davis        3 Lazio    true  6.5 0 1 0 0 0
 # Giornata 2
 put_stat okoye        2 Monza    false 7.0
 put_stat ekkelenkamp  2 Monza    false 9.5
 put_stat davis        2 Monza    false 6.5
-echo "27 voti inseriti."
+echo "30 voti inseriti."
 
 # ---------------------------------------------------------------------------------------------
 # 5) Disponibilita' (AvailabilityReports) - come confermato in chat il 14/09/2026, con Ndicka
