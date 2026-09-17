@@ -1,0 +1,121 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  FantaWin - risorse per il rilascio multi-account: User Pool Cognito (Hosted UI, login/signup)
+  con App Client per il frontend, e un secret in Secrets Manager per le api key esterne
+  (Football-Data.org, SportMonks). Applica con:
+    aws cloudformation deploy --template-file infra/cloudformation/multi-account.yaml \
+      --stack-name fantawin-multi-account \
+      --parameter-overrides CognitoDomainPrefix=<prefisso-univoco> CallbackURLs=https://tuo-frontend/callback \
+      --capabilities CAPABILITY_NAMED_IAM
+  Dopo il deploy, valorizza spring.security.oauth2.resourceserver.jwt.issuer-uri (COGNITO_ISSUER_URI)
+  con l'output CognitoIssuerUri, e riempi il secret FantaWinApiKeysSecret (console AWS o
+  `aws secretsmanager put-secret-value`) con le tue vere api key - il template lo crea con valori
+  placeholder vuoti, MAI con chiavi reali dentro il template stesso.
+
+Parameters:
+  AppName:
+    Type: String
+    Default: fantawin
+    Description: Prefisso usato nei nomi delle risorse.
+  CognitoDomainPrefix:
+    Type: String
+    Description: >-
+      Prefisso del dominio Hosted UI Cognito (https://<prefisso>.auth.<region>.amazoncognito.com) -
+      deve essere univoco in tutta la regione AWS, non solo nel tuo account. Scegline uno specifico
+      (es. fantawin-prod-<qualcosa>), "fantawin" da solo quasi certamente e' gia' preso.
+  CallbackURLs:
+    Type: CommaDelimitedList
+    Description: >-
+      URL a cui Cognito reindirizza il browser dopo un login riuscito (dove il tuo frontend riceve
+      il codice di autorizzazione), es. https://app.tuodominio.it/callback,http://localhost:3000/callback
+  LogoutURLs:
+    Type: CommaDelimitedList
+    Default: "http://localhost:3000/"
+    Description: URL a cui Cognito reindirizza dopo il logout.
+
+Resources:
+
+  UserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName: !Sub ${AppName}-users
+      # Login con email (non username separato) - piu' naturale per un prodotto pubblico
+      UsernameAttributes:
+        - email
+      AutoVerifiedAttributes:
+        - email
+      # Self-signup abilitato: chiunque puo' registrarsi dalla Hosted UI (nessun AdminCreateUser richiesto)
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: false
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireUppercase: true
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: false
+      Schema:
+        - Name: email
+          Required: true
+          Mutable: true
+
+  UserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain: !Ref CognitoDomainPrefix
+      UserPoolId: !Ref UserPool
+
+  UserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName: !Sub ${AppName}-app-client
+      UserPoolId: !Ref UserPool
+      # Nessun client secret: pensato per un frontend pubblico (SPA) con Authorization Code + PKCE,
+      # non per una chiamata server-to-server - un secret in un frontend non e' comunque tenibile segreto.
+      GenerateSecret: false
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows:
+        - code
+      AllowedOAuthScopes:
+        - openid
+        - email
+        - profile
+      SupportedIdentityProviders:
+        - COGNITO
+      CallbackURLs: !Ref CallbackURLs
+      LogoutURLs: !Ref LogoutURLs
+      ExplicitAuthFlows:
+        - ALLOW_USER_SRP_AUTH
+        - ALLOW_REFRESH_TOKEN_AUTH
+
+  ApiKeysSecret:
+    Type: AWS::SecretsManager::Secret
+    Properties:
+      Name: !Sub ${AppName}/api-keys
+      Description: >-
+        Api key esterne (Football-Data.org, SportMonks) lette da FantaWin via
+        spring.config.import=optional:aws-secretsmanager:fantawin/api-keys - le chiavi del JSON
+        DEVONO chiamarsi esattamente come le property Spring che devono valorizzare. Il template crea
+        solo i placeholder vuoti: valorizzali dopo il deploy (console AWS o
+        aws secretsmanager put-secret-value), mai committando le chiavi reali da nessuna parte.
+      SecretString: >-
+        {"fantawin.football-data-api-key":"","fantawin.sportmonks-api-key":""}
+
+Outputs:
+  UserPoolId:
+    Description: Id del User Pool Cognito creato.
+    Value: !Ref UserPool
+  UserPoolClientId:
+    Description: Id dell'App Client - lo usa il frontend per avviare il login sulla Hosted UI.
+    Value: !Ref UserPoolClient
+  CognitoIssuerUri:
+    Description: >-
+      Valore da mettere in spring.security.oauth2.resourceserver.jwt.issuer-uri (o nella variabile
+      d'ambiente COGNITO_ISSUER_URI) per attivare l'autenticazione sull'app.
+    Value: !Sub https://cognito-idp.${AWS::Region}.amazonaws.com/${UserPool}
+  HostedUiDomain:
+    Description: URL base della Hosted UI Cognito (pagina di login/signup).
+    Value: !Sub https://${CognitoDomainPrefix}.auth.${AWS::Region}.amazoncognito.com
+  ApiKeysSecretArn:
+    Description: ARN del secret con le api key esterne (da riempire dopo il deploy).
+    Value: !Ref ApiKeysSecret

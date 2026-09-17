@@ -2,6 +2,7 @@ package it.capoldan.fantawin.controller;
 
 import it.capoldan.fantawin.generated.openapi.server.v1.dto.BulkAddPlayerEntry;
 import it.capoldan.fantawin.generated.openapi.server.v1.dto.Player;
+import it.capoldan.fantawin.security.AuthenticatedUserProvider;
 import it.capoldan.fantawin.service.RosterService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -26,16 +27,28 @@ import java.util.List;
 public class RosterController {
 
     private final RosterService rosterService;
+    private final AuthenticatedUserProvider authenticatedUserProvider;
 
-    public RosterController(RosterService rosterService) {
+    public RosterController(RosterService rosterService, AuthenticatedUserProvider authenticatedUserProvider) {
         this.rosterService = rosterService;
+        this.authenticatedUserProvider = authenticatedUserProvider;
+    }
+
+    @GetMapping(value = "/fanta-private/rosters", produces = "application/json")
+    public Mono<ResponseEntity<Object>> listMyRosters() {
+        log.info("Richiesta GET /fanta-private/rosters ricevuta");
+        return authenticatedUserProvider.currentUserId()
+                .flatMap(rosterService::listMyRosters)
+                .map(response -> ResponseEntity.<Object>ok(response))
+                .doOnError(ex -> log.warn("Richiesta listMyRosters fallita", ex));
     }
 
     @GetMapping(value = "/fanta-private/getRoster/{rosterId}", produces = "application/json")
     public Mono<ResponseEntity<Object>> getRoster(@PathVariable("rosterId") String rosterId,
                                                    @NotNull @RequestParam(value = "matchDay", required = true) Integer matchDay) {
         log.info("Richiesta GET /fanta-private/getRoster/{} matchDay={} ricevuta", rosterId, matchDay);
-        return rosterService.getRoster(matchDay, rosterId)
+        return authenticatedUserProvider.currentUserId()
+                .flatMap(callerId -> rosterService.getRoster(matchDay, rosterId, callerId))
                 .map(response -> ResponseEntity.<Object>ok(response))
                 .doOnError(ex -> log.warn("Richiesta getRoster fallita per rosterId={}", rosterId, ex));
     }
@@ -44,7 +57,8 @@ public class RosterController {
     public Mono<ResponseEntity<Object>> addOrUpdatePlayer(@PathVariable("rosterId") String rosterId,
                                                             @Valid @RequestBody Mono<Player> player) {
         log.info("Richiesta POST /fanta-private/addPlayer/{} ricevuta", rosterId);
-        return player.flatMap(p -> rosterService.addOrUpdatePlayer(p, rosterId))
+        return player.zipWith(authenticatedUserProvider.currentUserId())
+                .flatMap(tuple -> rosterService.addOrUpdatePlayer(tuple.getT1(), rosterId, tuple.getT2()))
                 .map(response -> ResponseEntity.<Object>ok(response))
                 .doOnError(ex -> log.warn("Richiesta addOrUpdatePlayer fallita per rosterId={}", rosterId, ex));
     }
@@ -53,7 +67,8 @@ public class RosterController {
     public Mono<ResponseEntity<Object>> addPlayersBulk(@PathVariable("rosterId") String rosterId,
                                                           @Valid @RequestBody Mono<List<BulkAddPlayerEntry>> entries) {
         log.info("Richiesta POST /fanta-private/addPlayers/{} ricevuta", rosterId);
-        return entries.flatMap(list -> rosterService.addPlayersBulk(list, rosterId))
+        return entries.zipWith(authenticatedUserProvider.currentUserId())
+                .flatMap(tuple -> rosterService.addPlayersBulk(tuple.getT1(), rosterId, tuple.getT2()))
                 .map(response -> ResponseEntity.<Object>ok(response))
                 .doOnError(ex -> log.warn("Richiesta addPlayersBulk fallita per rosterId={}", rosterId, ex));
     }
@@ -62,7 +77,8 @@ public class RosterController {
     public Mono<ResponseEntity<Object>> deletePlayer(@PathVariable("playerId") String playerId,
                                                        @PathVariable("rosterId") String rosterId) {
         log.info("Richiesta DELETE /fanta-private/{}/{} ricevuta", playerId, rosterId);
-        return rosterService.deletePlayer(playerId, rosterId)
+        return authenticatedUserProvider.currentUserId()
+                .flatMap(callerId -> rosterService.deletePlayer(playerId, rosterId, callerId))
                 .then(Mono.just(new ResponseEntity<>(HttpStatus.NO_CONTENT)))
                 .doOnError(ex -> log.warn("Richiesta deletePlayer fallita per playerId={} rosterId={}", playerId, rosterId, ex));
     }

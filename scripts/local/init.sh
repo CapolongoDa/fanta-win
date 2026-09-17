@@ -157,6 +157,9 @@ ROSTER_PLAYERS='[
   {"M":{"playerId":{"S":"simeone"},"fantasyRole":{"S":"ATT"}}},
   {"M":{"playerId":{"S":"soule"},"fantasyRole":{"S":"ATT"}}}
 ]'
+# ownerId volutamente omesso: RosterService tratta una rosa senza ownerId come "non reclamata" -
+# nessun controllo di ownership finche' Cognito non e' configurato (vedi SecurityConfig), quindi
+# in locale resta apribile/modificabile come oggi indipendentemente dal JWT (se presente).
 ddb put-item --table-name "$ROSTER_TABLE" --item '{
   "rosterId": {"S": "as-junior"},
   "teamName": {"S": "AS Junior."},

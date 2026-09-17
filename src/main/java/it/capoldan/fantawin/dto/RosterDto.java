@@ -18,4 +18,6 @@ public class RosterDto {
     private String teamName;
 
     private List<RosterPlayerDto> players;
+
+    private String ownerId;
 }

@@ -3,6 +3,7 @@ package it.capoldan.fantawin.service;
 import it.capoldan.fantawin.dto.*;
 import it.capoldan.fantawin.exception.DataIntegrityException;
 import it.capoldan.fantawin.exception.ExceptionsCodes;
+import it.capoldan.fantawin.exception.ForbiddenException;
 import it.capoldan.fantawin.exception.IdConflictException;
 import it.capoldan.fantawin.exception.NotFoundException;
 import it.capoldan.fantawin.generated.openapi.server.v1.dto.BulkAddPlayerEntry;
@@ -10,6 +11,7 @@ import it.capoldan.fantawin.generated.openapi.server.v1.dto.BulkAddResult;
 import it.capoldan.fantawin.generated.openapi.server.v1.dto.BulkAddUnresolvedEntry;
 import it.capoldan.fantawin.generated.openapi.server.v1.dto.Player;
 import it.capoldan.fantawin.generated.openapi.server.v1.dto.RosterResponse;
+import it.capoldan.fantawin.generated.openapi.server.v1.dto.RosterSummary;
 import it.capoldan.fantawin.mapper.RosterAggregationMapper;
 import it.capoldan.fantawin.mapper.RosterRequestMapper;
 import it.capoldan.fantawin.middleware.dao.dynamo.*;
@@ -62,7 +64,21 @@ public class RosterService {
         this.playerCatalogResolverService = playerCatalogResolverService;
     }
 
-    public Mono<RosterResponse> getRoster(Integer matchday, String rosterId) {
+    /** Elenca le rose dell'utente autenticato (per popolare una selezione, senza dover conoscere a
+     * memoria i rosterId). Se callerId e' vuoto (Cognito non configurato, vedi SecurityConfig)
+     * torna TUTTE le rose esistenti, comportamento singolo-tenant coerente con quello attuale. */
+    public Mono<List<RosterSummary>> listMyRosters(Optional<String> callerId) {
+        log.info("Elenco rose per callerId={}", callerId.orElse("(auth disattivata)"));
+        return rosterDao.findAll()
+                .filter(roster -> callerId.isEmpty() || callerId.get().equals(roster.getOwnerId()))
+                .map(roster -> RosterSummary.builder()
+                        .rosterId(roster.getRosterId())
+                        .teamName(roster.getTeamName())
+                        .build())
+                .collectList();
+    }
+
+    public Mono<RosterResponse> getRoster(Integer matchday, String rosterId, Optional<String> callerId) {
         log.info("Recupero roster rosterId={} matchday={}", rosterId, matchday);
         return rosterDao.getById(rosterId)
                 .switchIfEmpty(Mono.defer(() -> {
@@ -70,6 +86,7 @@ public class RosterService {
                     return Mono.error(new NotFoundException(
                             "Rosa " + rosterId + " non trovata", ExceptionsCodes.ERROR_CODE_NOT_FOUND));
                 }))
+                .flatMap(roster -> enforceOwnership(roster, callerId))
                 .zipWith(fixturesForMatchday(matchday))
                 .flatMap(tuple -> {
                     RosterDto roster = tuple.getT1();
@@ -97,9 +114,9 @@ public class RosterService {
                 .collectMap(FixtureDto::getRealTeam, Function.identity());
     }
 
-    public Mono<Player> addOrUpdatePlayer(Player request, String rosterId) {
+    public Mono<Player> addOrUpdatePlayer(Player request, String rosterId, Optional<String> callerId) {
         Role role = RosterRequestMapper.toRole(request);
-        return addOrUpdatePlayerCore(request.getId(), request.getName(), request.getRealTeam(), role, rosterId);
+        return addOrUpdatePlayerCore(request.getId(), request.getName(), request.getRealTeam(), role, rosterId, callerId);
     }
 
     /**
@@ -116,18 +133,18 @@ public class RosterService {
      * di capienza (ROSTER_SLOTS) nonostante lo slot sia in realta' unico - la sequenzialita' e'
      * necessaria perche' ogni controllo di capienza veda l'esito delle aggiunte precedenti.
      */
-    public Mono<BulkAddResult> addPlayersBulk(List<BulkAddPlayerEntry> entries, String rosterId) {
+    public Mono<BulkAddResult> addPlayersBulk(List<BulkAddPlayerEntry> entries, String rosterId, Optional<String> callerId) {
         log.info("Bulk-add di {} giocatori in rosterId={}", entries == null ? 0 : entries.size(), rosterId);
         List<BulkAddPlayerEntry> safeEntries = entries == null ? List.of() : entries;
         return Flux.fromIterable(safeEntries)
-                .concatMap(entry -> resolveAndAddOne(entry, rosterId))
+                .concatMap(entry -> resolveAndAddOne(entry, rosterId, callerId))
                 .collectList()
                 .map(RosterService::buildBulkAddResult)
                 .doOnSuccess(result -> log.info("Bulk-add completato per rosterId={}: {} aggiunti, {} non risolti",
                         rosterId, result.getAdded().size(), result.getUnresolved().size()));
     }
 
-    private Mono<BulkAddOutcome> resolveAndAddOne(BulkAddPlayerEntry entry, String rosterId) {
+    private Mono<BulkAddOutcome> resolveAndAddOne(BulkAddPlayerEntry entry, String rosterId, Optional<String> callerId) {
         Role role = RoleParser.parse(entry.getRuolo());
         if (role == null) {
             log.warn("Bulk-add rosterId={}: ruolo non riconosciuto '{}' per nome='{}'", rosterId, entry.getRuolo(), entry.getNome());
@@ -139,7 +156,7 @@ public class RosterService {
                     if (resolution.isResolved()) {
                         PlayerCatalogDto catalogEntry = resolution.match();
                         return addOrUpdatePlayerCore(catalogEntry.getCatalogId(), catalogEntry.getNome(),
-                                catalogEntry.getSquadra(), role, rosterId)
+                                catalogEntry.getSquadra(), role, rosterId, callerId)
                                 .map(BulkAddOutcome::added)
                                 .onErrorResume(ex -> {
                                     log.warn("Bulk-add rosterId={}: aggiunta fallita per catalogId={} ({})",
@@ -184,15 +201,41 @@ public class RosterService {
         return BulkAddResult.builder().added(added).unresolved(unresolved).build();
     }
 
+    /** Carica la rosa se esiste (verificandone l'ownership), o ne prepara una nuova assegnata al
+     * chiamante se non esiste ancora - unico punto in cui una rosa viene "creata" e le viene
+     * assegnato un ownerId. */
+    private Mono<RosterDto> loadOrCreateRoster(String rosterId, Optional<String> callerId) {
+        return rosterDao.getById(rosterId)
+                .flatMap(existing -> enforceOwnership(existing, callerId))
+                .switchIfEmpty(Mono.fromSupplier(() -> RosterDto.builder()
+                        .rosterId(rosterId)
+                        .players(new ArrayList<>())
+                        .ownerId(callerId.orElse(null))
+                        .build()));
+    }
+
+    /** Nessun controllo se callerId e' vuoto (Cognito non configurato, vedi SecurityConfig/
+     * AuthenticatedUserProvider) o se la rosa non ha ancora un ownerId (creata prima di attivare
+     * Cognito - "non reclamata", non si assegna automaticamente al primo che la tocca). */
+    private Mono<RosterDto> enforceOwnership(RosterDto roster, Optional<String> callerId) {
+        if (callerId.isPresent() && roster.getOwnerId() != null && !roster.getOwnerId().equals(callerId.get())) {
+            log.warn("Accesso negato: rosterId={} appartiene a un altro utente", roster.getRosterId());
+            return Mono.error(new ForbiddenException(
+                    "La rosa " + roster.getRosterId() + " non appartiene all'utente autenticato",
+                    ExceptionsCodes.ERROR_CODE_FORBIDDEN_NOT_OWNER));
+        }
+        return Mono.just(roster);
+    }
+
     /** Logica condivisa di aggiunta/aggiornamento di un giocatore in rosa (cap ROSTER_SLOTS, versioning
-     * ottimistico su Players): usata sia da addOrUpdatePlayer (chiamata API diretta con Player completo)
-     * sia da addPlayersBulk (giocatore risolto dal catalogo) - un'unica implementazione del controllo di
-     * capienza per ruolo, non duplicata tra i due flussi. */
-    private Mono<Player> addOrUpdatePlayerCore(String playerId, String name, String realTeam, Role role, String rosterId) {
+     * ottimistico su Players, ownership della rosa): usata sia da addOrUpdatePlayer (chiamata API
+     * diretta con Player completo) sia da addPlayersBulk (giocatore risolto dal catalogo) - un'unica
+     * implementazione, non duplicata tra i due flussi. */
+    private Mono<Player> addOrUpdatePlayerCore(String playerId, String name, String realTeam, Role role,
+                                                String rosterId, Optional<String> callerId) {
         log.info("Aggiungo/aggiorno giocatore id={} ruolo={} in rosterId={}", playerId, role, rosterId);
 
-        return rosterDao.getById(rosterId)
-                .defaultIfEmpty(RosterDto.builder().rosterId(rosterId).players(new ArrayList<>()).build())
+        return loadOrCreateRoster(rosterId, callerId)
                 .flatMap(roster -> {
                     List<RosterPlayerDto> players = new ArrayList<>(safePlayers(roster));
 
@@ -237,10 +280,11 @@ public class RosterService {
                 .doOnError(ex -> log.warn("Errore nell'aggiunta/aggiornamento del giocatore id={} in rosterId={}", playerId, rosterId, ex));
     }
 
-    public Mono<Void> deletePlayer(String playerId, String rosterId) {
+    public Mono<Void> deletePlayer(String playerId, String rosterId, Optional<String> callerId) {
         log.info("Rimuovo giocatore id={} da rosterId={}", playerId, rosterId);
         // Rimuove solo l'associazione alla rosa, non l'anagrafica del giocatore.
         return rosterDao.getById(rosterId)
+                .flatMap(roster -> enforceOwnership(roster, callerId))
                 .flatMap(roster -> {
                     List<RosterPlayerDto> players = new ArrayList<>(safePlayers(roster));
                     if (!players.removeIf(p -> p.getPlayerId().equals(playerId))) {
