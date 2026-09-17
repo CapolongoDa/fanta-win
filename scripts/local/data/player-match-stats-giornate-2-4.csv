@@ -1,0 +1,28 @@
+giocatore;squadra;giornata;stagione;avversario;casa;voto;fantavoto;gol;assist;ammonizioni;espulsioni;xg;xa
+Barella;Inter;4;2026-27;Udinese;si;7.5;7.5;;;;;;
+Davis;Udinese;4;2026-27;Inter;no;6.5;6.5;;;;;;
+Perri;Torino;4;2026-27;Roma;si;5.5;5.5;;;;;;
+Comuzzo;Torino;4;2026-27;Roma;si;5.5;5.5;;;;;;
+Vlasic;Torino;4;2026-27;Roma;si;5.5;5.5;;;;;;
+Simeone;Torino;4;2026-27;Roma;si;8.5;8.5;;;;;;
+Molina;Roma;4;2026-27;Torino;no;6.0;6.0;;;;;;
+Kone;Roma;4;2026-27;Torino;no;6.0;6.0;;;;;;
+Di Lorenzo;Napoli;4;2026-27;Bologna;no;9.0;9.0;;;;;;
+Spinazzola;Napoli;4;2026-27;Bologna;no;6.5;6.5;;;;;;
+Pinamonti;Lazio;4;2026-27;Milan;si;8.5;8.5;;;;;;
+Modric;Milan;4;2026-27;Lazio;no;9.5;9.5;;;;;;
+Ederson;Atalanta;4;2026-27;Cagliari;si;5.5;5.5;;;;;;
+De Ketelaere;Atalanta;4;2026-27;Cagliari;si;5.0;5.0;;;;;;
+Laurientè;Sassuolo;4;2026-27;Juventus;no;6.5;6.5;;;;;;
+Bremer;Juventus;4;2026-27;Sassuolo;si;5.0;5.0;;;;;;
+Ostigard;Genoa;4;2026-27;Frosinone;si;6.0;6.0;;;;;;
+Ndicka;Roma;3;2026-27;Atalanta;si;5.5;5.5;;;;;;
+Molina;Roma;3;2026-27;Atalanta;si;6.0;6.0;;;;;;
+Kone;Roma;3;2026-27;Atalanta;si;6.0;6.0;;;;;;
+Soulè;Roma;3;2026-27;Atalanta;si;8.5;8.5;;;;;;
+Ederson;Atalanta;3;2026-27;Roma;no;7.0;7.0;;;;;;
+De Ketelaere;Atalanta;3;2026-27;Roma;no;6.0;6.0;;;;;;
+Skorupski;Bologna;3;2026-27;Sassuolo;si;7.5;7.5;;;;;;
+Okoye;Udinese;2;2026-27;Monza;no;7.0;7.0;;;;;;
+Ekkelenkamp;Udinese;2;2026-27;Monza;no;9.5;9.5;;;;;;
+Davis;Udinese;2;2026-27;Monza;no;6.5;6.5;;;;;;
