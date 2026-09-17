@@ -34,8 +34,10 @@ public class MatchStatsController {
     public Mono<ResponseEntity<Object>> importMatchStats(@RequestPart(value = "file", required = true) Flux<Part> file) {
         log.info("Richiesta POST /fanta-private/matchstats/import ricevuta");
         return playerMatchStatImportService.importFromCsv(file)
+                .doOnNext(result -> log.info("Richiesta POST /fanta-private/matchstats/import completata: {} importati, {} scartati",
+                        result.getImported(), result.getSkipped()))
                 .map(response -> ResponseEntity.<Object>ok(response))
-                .doOnError(ex -> log.warn("Richiesta di import statistiche fallita", ex));
+                .doOnError(ex -> log.warn("Richiesta POST /fanta-private/matchstats/import fallita", ex));
     }
 
     @GetMapping(value = "/fanta-private/matchstats/fixture-lookup/{realTeam}/{matchday}", produces = "application/json")
@@ -43,8 +45,10 @@ public class MatchStatsController {
                                                             @PathVariable("matchday") Integer matchday) {
         log.info("Richiesta GET /fanta-private/matchstats/fixture-lookup/{}/{} ricevuta", realTeam, matchday);
         return matchFixtureLookupService.lookupFixture(realTeam, matchday)
+                .doOnNext(result -> log.info("Richiesta GET /fanta-private/matchstats/fixture-lookup/{}/{} completata: avversario={} status={}",
+                        realTeam, matchday, result.getOpponentTeam(), result.getStatus()))
                 .map(response -> ResponseEntity.<Object>ok(response))
-                .doOnError(ex -> log.warn("Richiesta fixture-lookup fallita per realTeam={} matchday={}", realTeam, matchday, ex));
+                .doOnError(ex -> log.warn("Richiesta GET /fanta-private/matchstats/fixture-lookup/{}/{} fallita", realTeam, matchday, ex));
     }
 
     @PostMapping(value = "/fanta-private/matchstats/sync-real/{rosterId}/{matchday}", produces = "application/json")
@@ -52,7 +56,9 @@ public class MatchStatsController {
                                                             @PathVariable("matchday") Integer matchday) {
         log.info("Richiesta POST /fanta-private/matchstats/sync-real/{}/{} ricevuta", rosterId, matchday);
         return realMatchStatsSyncService.syncMatchStats(rosterId, matchday)
+                .doOnNext(result -> log.info("Richiesta POST /fanta-private/matchstats/sync-real/{}/{} completata: {} giocatori aggiornati, {} squadre non risolte",
+                        rosterId, matchday, result.getUpdatedPlayers().size(), result.getUnresolvedTeams().size()))
                 .map(response -> ResponseEntity.<Object>ok(response))
-                .doOnError(ex -> log.warn("Richiesta di sync statistiche reali fallita per rosterId={} matchday={}", rosterId, matchday, ex));
+                .doOnError(ex -> log.warn("Richiesta POST /fanta-private/matchstats/sync-real/{}/{} fallita", rosterId, matchday, ex));
     }
 }

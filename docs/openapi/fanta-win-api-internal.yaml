@@ -4,7 +4,7 @@ info:
   description: >-
     API REST B2B per la gestione della rosa su DynamoDB e il calcolo predittivo 
     della formazione ottimale di Fantacalcio (FantaClaude).
-  version: 2.11.0
+  version: 2.12.0
   x-api-id: fantaclaude-lineup-manager-api-b2b
   termsOfService: https://fantaclaude.ai/termini-di-servizio
   contact:
@@ -110,7 +110,10 @@ paths:
   /fanta-private/addPlayer/{rosterId}:
     post:
       summary: Aggiunge o aggiorna un giocatore nella rosa
-      description: Inserisce un nuovo calciatore o ne aggiorna le statistiche e lo stato corrente.
+      description: >-
+        Inserisce un nuovo calciatore o ne aggiorna le statistiche e lo stato corrente. Se rosterId
+        non esiste ancora, viene creata una nuova rosa con questo id (assegnata al chiamante come
+        proprietario, se l'autenticazione e' attiva) - usa il parametro teamName per darle un nome.
       operationId: addOrUpdatePlayer
       tags:
         - Roster
@@ -122,6 +125,16 @@ paths:
           schema:
             type: string
             example: junior
+        - name: teamName
+          in: query
+          required: false
+          description: >-
+            Nome della squadra fantacalcistica. Usato solo se rosterId non esiste ancora e va
+            creata una nuova rosa (vedi descrizione dell'operazione); ignorato se la rosa esiste
+            gia', il nome esistente non viene mai sovrascritto da qui.
+          schema:
+            type: string
+            example: AS Junior.
       requestBody:
         required: true
         content:
@@ -681,6 +694,13 @@ components:
             nuova rosa con questo id (assegnata al chiamante come proprietario, se l'autenticazione
             e' attiva - vedi SecurityConfig).
           example: nuova-squadra
+        teamName:
+          type: string
+          description: >-
+            Nome della squadra fantacalcistica. Usato solo se rosterId non esiste ancora e va
+            creata una nuova rosa; ignorato se la rosa esiste gia', il nome esistente non viene
+            mai sovrascritto da qui.
+          example: AS Junior.
         players:
           type: array
           description: >-
@@ -693,6 +713,7 @@ components:
           maxItems: 25
       example:
         rosterId: nuova-squadra
+        teamName: AS Junior.
         players:
           - nome: Oyono A.
             ruolo: DIF

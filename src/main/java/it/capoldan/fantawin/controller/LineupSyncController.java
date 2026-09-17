@@ -22,7 +22,9 @@ public class LineupSyncController {
     public Mono<ResponseEntity<Object>> syncOfficialLineup(@PathVariable("rosterId") String rosterId) {
         log.info("Richiesta POST /fanta-private/lineups/sync-official/{} ricevuta", rosterId);
         return officialLineupSyncService.syncOfficialLineup(rosterId)
+                .doOnNext(result -> log.info("Richiesta POST /fanta-private/lineups/sync-official/{} completata: {} giocatori aggiornati, {} squadre non risolte",
+                        rosterId, result.getUpdatedPlayers().size(), result.getUnresolvedTeams().size()))
                 .map(response -> ResponseEntity.<Object>ok(response))
-                .doOnError(ex -> log.warn("Richiesta di sync formazione ufficiale fallita per rosterId={}", rosterId, ex));
+                .doOnError(ex -> log.warn("Richiesta POST /fanta-private/lineups/sync-official/{} fallita", rosterId, ex));
     }
 }

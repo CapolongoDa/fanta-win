@@ -98,7 +98,7 @@
 							}
 						],
 						"url": {
-							"raw": "{{baseUrl}}/fanta-private/addPlayer/{{rosterId}}",
+							"raw": "{{baseUrl}}/fanta-private/addPlayer/{{rosterId}}?teamName=AS Junior.",
 							"host": [
 								"{{baseUrl}}"
 							],
@@ -106,13 +106,20 @@
 								"fanta-private",
 								"addPlayer",
 								"{{rosterId}}"
+							],
+							"query": [
+								{
+									"key": "teamName",
+									"value": "AS Junior.",
+									"description": "Usato solo se rosterId non esiste ancora - ignorato se la rosa esiste gia'"
+								}
 							]
 						},
 						"body": {
 							"mode": "raw",
 							"raw": "{\n  \"id\": \"okoye\",\n  \"name\": \"Okoye\",\n  \"realTeam\": \"Udinese\",\n  \"position\": \"POR\"\n}"
 						},
-						"description": "Aggiunge il giocatore alla rosa o aggiorna il suo slot se gia' presente (stesso id). Rispetta i vincoli sugli slot per ruolo (3 POR / 8 DIF / 8 CEN / 6 ATT)."
+						"description": "Aggiunge il giocatore alla rosa o aggiorna il suo slot se gia' presente (stesso id). Rispetta i vincoli sugli slot per ruolo (3 POR / 8 DIF / 8 CEN / 6 ATT). Se rosterId non esiste ancora, viene creata una nuova rosa: usa il query param teamName per darle un nome (ignorato se la rosa esiste gia')."
 					}
 				},
 				{
@@ -141,9 +148,9 @@
 						},
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"rosterId\": \"{{rosterId}}\",\n  \"players\": [\n    {\n      \"nome\": \"Oyono A.\",\n      \"ruolo\": \"DIF\"\n    },\n    {\n      \"nome\": \"Thuram\",\n      \"ruolo\": \"A\"\n    }\n  ]\n}"
+							"raw": "{\n  \"rosterId\": \"{{rosterId}}\",\n  \"teamName\": \"AS Junior.\",\n  \"players\": [\n    {\n      \"nome\": \"Oyono A.\",\n      \"ruolo\": \"DIF\"\n    },\n    {\n      \"nome\": \"Thuram\",\n      \"ruolo\": \"A\"\n    }\n  ]\n}"
 						},
-						"description": "Aggiunge in blocco piu' giocatori a una rosa a partire da rosterId + nome+ruolo (nessun id da inventare): ognuno viene risolto contro l'anagrafica PlayerCatalog (vedi cartella Player Catalog). Se rosterId non esiste ancora, viene creata una nuova rosa. Ruolo accetta sia P/D/C/A che POR/DIF/CEN/ATT. Le entry non risolvibili (ruolo sconosciuto, nessun match, o nome ambiguo tra piu' giocatori con lo stesso ruolo) non bloccano le altre, finiscono in 'unresolved' con il motivo. Massimo 25 giocatori per richiesta."
+						"description": "Aggiunge in blocco piu' giocatori a una rosa a partire da rosterId + nome+ruolo (nessun id da inventare): ognuno viene risolto contro l'anagrafica PlayerCatalog (vedi cartella Player Catalog). Se rosterId non esiste ancora, viene creata una nuova rosa - usa teamName per darle un nome (ignorato se la rosa esiste gia'). Ruolo accetta P/D/C/A, POR/DIF/CEN/ATT o alias Mantra come CC/DC. Le entry non risolvibili (ruolo sconosciuto, nessun match, o nome ambiguo tra piu' giocatori con lo stesso ruolo) non bloccano le altre, finiscono in 'unresolved' con il motivo. Massimo 25 giocatori per richiesta."
 					}
 				},
 				{

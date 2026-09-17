@@ -31,7 +31,9 @@ public class PredictionController {
         log.info("Richiesta POST /fanta-private/predict/lineup/{} ricevuta", rosterId);
         return lineupRequest.flatMap(req -> lineupPredictionService.calculateOptimalLineup(req, rosterId))
                 .doOnNext(LineupFormationLogger::logFormation)
+                .doOnNext(response -> log.info("Richiesta POST /fanta-private/predict/lineup/{} completata: modulo={} punteggio={}",
+                        rosterId, response.getWinningFormation(), response.getTotalExpectedScore()))
                 .map(response -> ResponseEntity.<Object>ok(response))
-                .doOnError(ex -> log.warn("Richiesta di calcolo formazione fallita per rosterId={}", rosterId, ex));
+                .doOnError(ex -> log.warn("Richiesta POST /fanta-private/predict/lineup/{} fallita", rosterId, ex));
     }
 }

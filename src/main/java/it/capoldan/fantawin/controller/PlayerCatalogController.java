@@ -24,7 +24,9 @@ public class PlayerCatalogController {
     public Mono<ResponseEntity<Object>> importPlayerCatalog(@RequestPart(value = "file", required = true) Flux<Part> file) {
         log.info("Richiesta POST /fanta-private/playercatalog/import ricevuta");
         return playerCatalogImportService.importFromCsv(file)
+                .doOnNext(result -> log.info("Richiesta POST /fanta-private/playercatalog/import completata: {} importati, {} scartati",
+                        result.getImported(), result.getSkipped()))
                 .map(response -> ResponseEntity.<Object>ok(response))
-                .doOnError(ex -> log.warn("Richiesta di import anagrafica catalogo fallita", ex));
+                .doOnError(ex -> log.warn("Richiesta POST /fanta-private/playercatalog/import fallita", ex));
     }
 }
