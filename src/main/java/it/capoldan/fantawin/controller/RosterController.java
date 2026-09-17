@@ -1,6 +1,6 @@
 package it.capoldan.fantawin.controller;
 
-import it.capoldan.fantawin.generated.openapi.server.v1.dto.BulkAddPlayerEntry;
+import it.capoldan.fantawin.generated.openapi.server.v1.dto.BulkAddRosterRequest;
 import it.capoldan.fantawin.generated.openapi.server.v1.dto.Player;
 import it.capoldan.fantawin.security.AuthenticatedUserProvider;
 import it.capoldan.fantawin.service.RosterService;
@@ -18,8 +18,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import reactor.core.publisher.Mono;
-
-import java.util.List;
 
 @Slf4j
 @RestController
@@ -63,14 +61,14 @@ public class RosterController {
                 .doOnError(ex -> log.warn("Richiesta addOrUpdatePlayer fallita per rosterId={}", rosterId, ex));
     }
 
-    @PostMapping(value = "/fanta-private/addPlayers/{rosterId}", consumes = "application/json", produces = "application/json")
-    public Mono<ResponseEntity<Object>> addPlayersBulk(@PathVariable("rosterId") String rosterId,
-                                                          @Valid @RequestBody Mono<List<BulkAddPlayerEntry>> entries) {
-        log.info("Richiesta POST /fanta-private/addPlayers/{} ricevuta", rosterId);
-        return entries.zipWith(authenticatedUserProvider.currentUserId())
-                .flatMap(tuple -> rosterService.addPlayersBulk(tuple.getT1(), rosterId, tuple.getT2()))
+    @PostMapping(value = "/fanta-private/addPlayers", consumes = "application/json", produces = "application/json")
+    public Mono<ResponseEntity<Object>> addPlayersBulk(@Valid @RequestBody Mono<BulkAddRosterRequest> request) {
+        log.info("Richiesta POST /fanta-private/addPlayers ricevuta");
+        return request.zipWith(authenticatedUserProvider.currentUserId())
+                .flatMap(tuple -> rosterService.addPlayersBulk(
+                        tuple.getT1().getPlayers(), tuple.getT1().getRosterId(), tuple.getT2()))
                 .map(response -> ResponseEntity.<Object>ok(response))
-                .doOnError(ex -> log.warn("Richiesta addPlayersBulk fallita per rosterId={}", rosterId, ex));
+                .doOnError(ex -> log.warn("Richiesta addPlayersBulk fallita", ex));
     }
 
     @DeleteMapping(value = "/fanta-private/{playerId}/{rosterId}", produces = "application/json")
