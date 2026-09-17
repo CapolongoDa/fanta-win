@@ -57,6 +57,7 @@ public class FantaWinConfigs {
         private String fixturesTableName;
         private String availabilityReportsTableName;
         private String rosterTableName;
+        private String playerCatalogTableName;
     }
 
     @PostConstruct

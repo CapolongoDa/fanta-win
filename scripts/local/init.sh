@@ -34,6 +34,7 @@ MATCH_STATS_TABLE="PlayerMatchStats"
 FIXTURES_TABLE="Fixtures"
 AVAILABILITY_TABLE="AvailabilityReports"
 ROSTER_TABLE="Roster"
+PLAYER_CATALOG_TABLE="PlayerCatalog"
 
 ddb() {
   aws dynamodb --endpoint-url "$ENDPOINT_URL" --region "$REGION" "$@"
@@ -75,6 +76,10 @@ create_table "$MATCH_STATS_TABLE" playerId S matchday N
 create_table "$FIXTURES_TABLE" matchday N realTeam S
 create_table "$AVAILABILITY_TABLE" playerId S
 create_table "$ROSTER_TABLE" rosterId S
+# PlayerCatalog resta vuota qui: 500+ giocatori, popolata via POST /fanta-private/playercatalog/import
+# (vedi Postman "Player Catalog > Import Player Catalog (CSV)") col CSV esportato dalle quotazioni
+# fantacalcio.it, non seminata a mano come le altre tabelle.
+create_table "$PLAYER_CATALOG_TABLE" catalogId S
 
 # ---------------------------------------------------------------------------------------------
 # 2) Anagrafica giocatori (Players) - rosa reale "AS Junior."
