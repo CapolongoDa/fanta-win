@@ -4,6 +4,7 @@ import it.capoldan.fantawin.exception.ExternalServiceException;
 import it.capoldan.fantawin.exception.HttpResponseException;
 import it.capoldan.fantawin.generated.openapi.msclient.sportmonks.api.SportMonksApi;
 import it.capoldan.fantawin.generated.openapi.msclient.sportmonks.model.FixturesResponse;
+import it.capoldan.fantawin.generated.openapi.msclient.sportmonks.model.RoundsResponse;
 import it.capoldan.fantawin.generated.openapi.msclient.sportmonks.model.TeamSearchResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -20,6 +21,7 @@ import java.util.function.Supplier;
 public class SportMonksClient {
 
     private static final String LINEUPS_INCLUDE = "lineups";
+    private static final String FIXTURES_EVENTS_INCLUDE = "fixtures.events;fixtures.participants";
 
     private final SportMonksApi delegate;
 
@@ -35,6 +37,12 @@ public class SportMonksClient {
     public Mono<FixturesResponse> getFixturesBetweenForTeam(Integer teamId, String startDate, String endDate) {
         return callWithRetry(() -> delegate.getFixturesBetweenForTeam(startDate, endDate, teamId, LINEUPS_INCLUDE),
                 "getFixturesBetweenForTeam teamId=" + teamId + " [" + startDate + "," + endDate + "]");
+    }
+
+    /** Tutti i round di una stagione, ciascuno con le proprie fixture e i relativi eventi (gol/assist/cartellini). */
+    public Mono<RoundsResponse> getRoundsForSeason(Integer seasonId) {
+        return callWithRetry(() -> delegate.getRoundsBySeasonId(seasonId, FIXTURES_EVENTS_INCLUDE),
+                "getRoundsForSeason seasonId=" + seasonId);
     }
 
     private <T> Mono<T> callWithRetry(Supplier<T> call, String callDescription) {

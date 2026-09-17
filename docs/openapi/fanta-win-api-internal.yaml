@@ -4,7 +4,7 @@ info:
   description: >-
     API REST B2B per la gestione della rosa su DynamoDB e il calcolo predittivo 
     della formazione ottimale di Fantacalcio (FantaClaude).
-  version: 2.6.0
+  version: 2.7.0
   x-api-id: fantaclaude-lineup-manager-api-b2b
   termsOfService: https://fantaclaude.ai/termini-di-servizio
   contact:
@@ -312,6 +312,63 @@ paths:
               schema:
                 $ref: 'problem-internal.yaml#/components/schemas/Problem'
 
+  /fanta-private/matchstats/sync-real/{rosterId}/{matchday}:
+    post:
+      summary: Sincronizza da SportMonks gol/assist/cartellini/gol-subiti reali di una giornata
+      description: >
+        Per ogni giocatore in rosa, legge da SportMonks (endpoint /rounds/seasons/{seasonId}, un'unica
+        chiamata per l'intera giornata) gli eventi oggettivi della partita della sua squadra reale in
+        quella giornata: gol, assist (related_player_id sull'evento Goal), ammonizioni, espulsioni e,
+        per portieri/difensori, gol subiti dalla squadra. Il voto (pagella) NON viene toccato: resta
+        quello gia' presente (manuale, es. da /fanta-private/matchstats/import) o vuoto se il giocatore
+        non ha ancora un voto per questa giornata - in quel caso fantavoto resta vuoto finche' il voto
+        non viene valorizzato. Se la riga PlayerMatchStat per playerId+giornata non esiste ancora viene
+        creata. Richiede fantawin.sportmonks-serie-a-season-id configurato. Al termine scrive anche un
+        export CSV con lo storico corrente del roster in fantawin.match-stats-export-dir.
+      operationId: syncRealMatchStats
+      tags:
+        - MatchStats
+      parameters:
+        - name: rosterId
+          in: path
+          required: true
+          description: id della squadra del fantacalcio
+          schema:
+            type: string
+            example: junior
+        - name: matchday
+          in: path
+          required: true
+          description: numero di giornata di Serie A da sincronizzare
+          schema:
+            type: integer
+            example: 5
+      responses:
+        '200':
+          description: Sincronizzazione eseguita (anche se qualche partita non e' stata trovata)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MatchStatsSyncResult'
+        '404':
+          description: Rosa non trovata
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
+        '500':
+          description: Internal server error (es. fantawin.sportmonks-serie-a-season-id non configurato)
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
+        '503':
+          description: SportMonks temporaneamente non raggiungibile
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
+
   /fanta-private/predict/lineup/{rosterId}:
     post:
       summary: Calcola l'undici titolare e la panchina ottimale per la giornata
@@ -431,6 +488,63 @@ components:
           type: number
           format: double
           example: 100.0
+
+    MatchStatsSyncResult:
+      type: object
+      required:
+        - updatedPlayers
+        - unresolvedTeams
+      properties:
+        updatedPlayers:
+          type: array
+          items:
+            $ref: '#/components/schemas/PlayerMatchStatUpdate'
+        unresolvedTeams:
+          type: array
+          description: >-
+            Squadre reali per cui non e' stato possibile trovare la fixture di questa giornata su
+            SportMonks (round non trovato, fixture ambigua/assente o nome squadra non risolto tra i
+            participants)
+          items:
+            type: string
+          example: [Milan]
+
+    PlayerMatchStatUpdate:
+      type: object
+      required:
+        - playerId
+        - name
+        - realTeam
+        - gol
+        - assist
+        - ammonizioni
+        - espulsioni
+      properties:
+        playerId:
+          type: string
+        name:
+          type: string
+          example: Barella
+        realTeam:
+          type: string
+          example: Inter
+        gol:
+          type: integer
+        assist:
+          type: integer
+        ammonizioni:
+          type: integer
+        espulsioni:
+          type: integer
+        golSubiti:
+          type: integer
+          nullable: true
+          description: Valorizzato solo per portieri/difensori
+        fantavoto:
+          type: number
+          format: double
+          nullable: true
+          description: Null se il voto non e' ancora stato inserito manualmente per questa giornata
 
     FixtureLookupResult:
       type: object

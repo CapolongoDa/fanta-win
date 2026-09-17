@@ -33,6 +33,12 @@ public class FantaWinConfigs {
     // date interrogata per squadra: se ne trova piu' di uno salta la squadra con un warning invece
     // di indovinare quale sia quello giusto.
     private Integer sportmonksSerieALeagueId;
+    // Id numerico della stagione Serie A 2026-27 su SportMonks: usato da RealMatchStatsSyncService
+    // per interrogare /rounds/seasons/{id} e ricavare gol/assist/cartellini reali di ogni giornata.
+    private Integer sportmonksSerieASeasonId;
+    // Cartella (relativa alla working dir del processo, o assoluta) dove RealMatchStatsSyncService
+    // scrive l'export CSV per-rosterId dopo ogni sync, con lo storico attuale del roster.
+    private String matchStatsExportDir;
     private double defaultMatchDifficulty;
     private double bigPlayerThreshold;
     // Peso del voto puro (senza bonus/malus) nella componente stato di forma recente del FantaRating,

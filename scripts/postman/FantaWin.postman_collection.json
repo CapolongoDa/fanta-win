@@ -181,6 +181,32 @@
 						},
 						"description": "Interroga Football-Data.org (stesso client esterno della sync Fixtures) per il vero avversario/casa-trasferta/data di realTeam alla giornata indicata: utile per verificare/prefillare a mano il CSV di import prima di compilarlo."
 					}
+				},
+				{
+					"name": "Sync Real Match Stats (SportMonks)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/fanta-private/matchstats/sync-real/{{rosterId}}/{{matchday}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"fanta-private",
+								"matchstats",
+								"sync-real",
+								"{{rosterId}}",
+								"{{matchday}}"
+							]
+						},
+						"description": "Legge da SportMonks (endpoint /rounds/seasons/{seasonId}, include=fixtures.events;fixtures.participants) gli eventi oggettivi reali della giornata indicata - gol, assist, ammonizioni, espulsioni e gol subiti per portieri/difensori - e li scrive su PlayerMatchStat per ogni giocatore in rosa, ricalcolando il fantavoto. Il voto (pagella) non viene toccato: resta quello gia' presente o vuoto se non ancora inserito manualmente. Scrive anche un export CSV per-rosterId in fantawin.match-stats-export-dir. Richiede fantawin.sportmonks-serie-a-season-id valorizzato."
+					}
 				}
 			]
 		},

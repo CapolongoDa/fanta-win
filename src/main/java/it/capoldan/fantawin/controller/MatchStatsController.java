@@ -2,6 +2,7 @@ package it.capoldan.fantawin.controller;
 
 import it.capoldan.fantawin.service.MatchFixtureLookupService;
 import it.capoldan.fantawin.service.PlayerMatchStatImportService;
+import it.capoldan.fantawin.service.RealMatchStatsSyncService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.codec.multipart.Part;
@@ -19,11 +20,14 @@ public class MatchStatsController {
 
     private final PlayerMatchStatImportService playerMatchStatImportService;
     private final MatchFixtureLookupService matchFixtureLookupService;
+    private final RealMatchStatsSyncService realMatchStatsSyncService;
 
     public MatchStatsController(PlayerMatchStatImportService playerMatchStatImportService,
-                                 MatchFixtureLookupService matchFixtureLookupService) {
+                                 MatchFixtureLookupService matchFixtureLookupService,
+                                 RealMatchStatsSyncService realMatchStatsSyncService) {
         this.playerMatchStatImportService = playerMatchStatImportService;
         this.matchFixtureLookupService = matchFixtureLookupService;
+        this.realMatchStatsSyncService = realMatchStatsSyncService;
     }
 
     @PostMapping(value = "/fanta-private/matchstats/import", consumes = "multipart/form-data", produces = "application/json")
@@ -41,5 +45,14 @@ public class MatchStatsController {
         return matchFixtureLookupService.lookupFixture(realTeam, matchday)
                 .map(response -> ResponseEntity.<Object>ok(response))
                 .doOnError(ex -> log.warn("Richiesta fixture-lookup fallita per realTeam={} matchday={}", realTeam, matchday, ex));
+    }
+
+    @PostMapping(value = "/fanta-private/matchstats/sync-real/{rosterId}/{matchday}", produces = "application/json")
+    public Mono<ResponseEntity<Object>> syncRealMatchStats(@PathVariable("rosterId") String rosterId,
+                                                            @PathVariable("matchday") Integer matchday) {
+        log.info("Richiesta POST /fanta-private/matchstats/sync-real/{}/{} ricevuta", rosterId, matchday);
+        return realMatchStatsSyncService.syncMatchStats(rosterId, matchday)
+                .map(response -> ResponseEntity.<Object>ok(response))
+                .doOnError(ex -> log.warn("Richiesta di sync statistiche reali fallita per rosterId={} matchday={}", rosterId, matchday, ex));
     }
 }

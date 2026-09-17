@@ -80,6 +80,40 @@ paths:
               schema:
                 $ref: '#/components/schemas/FixturesResponse'
 
+  /rounds/seasons/{seasonId}:
+    get:
+      summary: Round (giornate) di una stagione, con le partite e gli eventi di ciascuna
+      description: >
+        Usata per il sync automatico delle statistiche reali di giornata (gol/assist/cartellini/gol
+        subiti): un'unica chiamata per stagione restituisce tutti i round, ciascuno con le proprie
+        fixture e i relativi eventi (include=fixtures.events), cosi' da ricavare i bonus/malus
+        oggettivi senza dover interrogare una fixture alla volta per squadra. Il "voto" (pagella)
+        resta manuale: SportMonks fornisce solo eventi oggettivi, non un giudizio editoriale.
+      tags:
+        - SportMonks
+      operationId: getRoundsBySeasonId
+      security:
+        - ApiKeyAuth: []
+      parameters:
+        - name: seasonId
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: include
+          in: query
+          required: false
+          schema:
+            type: string
+            default: "fixtures.events;fixtures.participants"
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoundsResponse'
+
 components:
   securitySchemes:
     # SportMonks API 3.0 autentica con il token come query param api_token (NON header/Bearer).
@@ -114,6 +148,29 @@ components:
           items:
             $ref: '#/components/schemas/SmFixture'
 
+    RoundsResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/SmRound'
+
+    SmRound:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+          description: Numero di giornata come stringa (es. "4")
+        finished:
+          type: boolean
+        fixtures:
+          type: array
+          items:
+            $ref: '#/components/schemas/SmFixture'
+
     SmFixture:
       type: object
       properties:
@@ -129,6 +186,15 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SmLineupPlayer'
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/SmEvent'
+        participants:
+          type: array
+          description: Le due squadre della fixture (usato per risolvere il team_id di ciascuna a partire dal nome).
+          items:
+            $ref: '#/components/schemas/SmParticipant'
 
     SmLineupPlayer:
       type: object
@@ -147,4 +213,39 @@ components:
         position_id:
           type: integer
         jersey_number:
+          type: integer
+
+    SmParticipant:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+
+    SmEvent:
+      type: object
+      description: >
+        Evento oggettivo di una fixture. Niente "assist" come evento a se' stante: sull'evento Goal
+        (type_id 14) o Penalty (16), related_player_id/related_player_name portano l'assistman.
+        Type_id rilevanti: 14=Goal, 15=OwnGoal, 16=Penalty(segnata), 19=YellowCard, 20=RedCard,
+        21=YellowRedCard (secondo giallo, conta come espulsione).
+      properties:
+        id:
+          type: integer
+        fixture_id:
+          type: integer
+        type_id:
+          type: integer
+        player_id:
+          type: integer
+        player_name:
+          type: string
+        related_player_id:
+          type: integer
+        related_player_name:
+          type: string
+        team_id:
+          type: integer
+        minute:
           type: integer
