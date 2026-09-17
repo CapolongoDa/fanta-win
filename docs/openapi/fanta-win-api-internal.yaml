@@ -4,7 +4,7 @@ info:
   description: >-
     API REST B2B per la gestione della rosa su DynamoDB e il calcolo predittivo 
     della formazione ottimale di Fantacalcio (FantaClaude).
-  version: 2.8.0
+  version: 2.9.0
   x-api-id: fantaclaude-lineup-manager-api-b2b
   termsOfService: https://fantaclaude.ai/termini-di-servizio
   contact:
@@ -27,6 +27,33 @@ tags:
     description: Anagrafica completa dei calciatori di Serie A (quotazioni fantacalcio.it), usata per risolvere nome+ruolo in un id univoco quando si aggiunge un giocatore alla rosa
 
 paths:
+  /fanta-private/rosters:
+    get:
+      summary: Elenca le rose dell'utente autenticato
+      description: >
+        Torna rosterId e nome squadra di ogni rosa posseduta dall'utente autenticato (il claim "sub"
+        del JWT Cognito), cosi' il chiamante non deve conoscere a memoria i rosterId. Se
+        l'autenticazione Cognito non e' configurata (vedi SecurityConfig), torna semplicemente TUTTE
+        le rose esistenti, comportamento singolo-tenant coerente con quello attuale.
+      operationId: listMyRosters
+      tags:
+        - Roster
+      responses:
+        '200':
+          description: Elenco recuperato con successo (puo' essere vuoto)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RosterSummary'
+        '503':
+          description: Storage DynamoDB temporaneamente non raggiungibile
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
+
   /fanta-private/getRoster/{rosterId}:
     get:
       summary: Recupera la rosa completa dell'utente
@@ -55,6 +82,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RosterResponse'
+        '403':
+          description: La rosa appartiene a un altro utente
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
         '404':
           description: Not Found Roster
           content:
@@ -73,6 +106,7 @@ paths:
             application/json:
               schema:
                 $ref: 'problem-internal.yaml#/components/schemas/Problem'
+
   /fanta-private/addPlayer/{rosterId}:
     post:
       summary: Aggiunge o aggiorna un giocatore nella rosa
@@ -103,6 +137,12 @@ paths:
                 $ref: '#/components/schemas/Player'
         '400':
           description: Invalid player data
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
+        '403':
+          description: La rosa appartiene a un altro utente
           content:
             application/json:
               schema:
@@ -159,6 +199,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/BulkAddResult'
+        '403':
+          description: La rosa appartiene a un altro utente
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
         '400':
           description: Corpo della richiesta assente o non valido
           content:
@@ -197,6 +243,12 @@ paths:
       responses:
         '204':
           description: Giocatore rimosso con successo
+        '403':
+          description: La rosa appartiene a un altro utente
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
         '404':
           description: Player not found
           content:
@@ -526,6 +578,19 @@ paths:
 
 components:
   schemas:
+    RosterSummary:
+      type: object
+      required:
+        - rosterId
+        - teamName
+      properties:
+        rosterId:
+          type: string
+          example: junior
+        teamName:
+          type: string
+          example: AS Junior.
+
     PlayerCatalogImportResult:
       type: object
       required:

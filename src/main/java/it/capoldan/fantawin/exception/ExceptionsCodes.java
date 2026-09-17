@@ -26,5 +26,7 @@ public class ExceptionsCodes {
     public static final String ERROR_CODE_SERVICE_UNAVAILABLE = "SERVICE_UNAVAILABLE";
     /** File caricato per l'import (es. statistiche di giornata) assente, vuoto o non leggibile come CSV. */
     public static final String ERROR_CODE_INVALID_IMPORT_FILE = "INVALID_IMPORT_FILE";
+    /** L'utente autenticato non e' il proprietario della rosa richiesta. */
+    public static final String ERROR_CODE_FORBIDDEN_NOT_OWNER = "FORBIDDEN_NOT_OWNER";
 }
 

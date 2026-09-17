@@ -22,6 +22,7 @@ public class RosterEntity {
     public static final String COL_PK = "rosterId";
     private static final String COL_TEAM_NAME = "teamName";
     private static final String COL_PLAYERS = "players";
+    private static final String COL_OWNER_ID = "ownerId";
 
     @Getter(onMethod=@__({@DynamoDbPartitionKey, @DynamoDbAttribute(COL_PK)}))
     private String rosterId;
@@ -31,4 +32,10 @@ public class RosterEntity {
 
     @Getter(onMethod=@__({@DynamoDbAttribute(COL_PLAYERS)}))
     private List<RosterPlayerEntity> players;
+
+    /** Sub Cognito dell'utente che ha creato questa rosa (null sulle rose create prima di attivare
+     * Cognito: RosterService le tratta come "non reclamate", nessun controllo di ownership su di
+     * loro finche' non viene esplicitamente assegnato un ownerId). */
+    @Getter(onMethod=@__({@DynamoDbAttribute(COL_OWNER_ID)}))
+    private String ownerId;
 }

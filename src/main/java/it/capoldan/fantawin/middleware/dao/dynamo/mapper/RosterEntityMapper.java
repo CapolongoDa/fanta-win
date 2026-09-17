@@ -20,6 +20,7 @@ public class RosterEntityMapper {
                         : entity.getPlayers().stream()
                         .map(RosterEntityMapper::toPlayerDto)
                         .toList())
+                .ownerId(entity.getOwnerId())
                 .build();
     }
 
@@ -32,6 +33,7 @@ public class RosterEntityMapper {
                         : dto.getPlayers().stream()
                         .map(RosterEntityMapper::toPlayerEntity)
                         .toList())
+                .ownerId(dto.getOwnerId())
                 .build();
     }
 

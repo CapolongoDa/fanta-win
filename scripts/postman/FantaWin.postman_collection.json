@@ -31,6 +31,29 @@
 			"name": "Roster",
 			"item": [
 				{
+					"name": "List My Rosters",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/fanta-private/rosters",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"fanta-private",
+								"rosters"
+							]
+						},
+						"description": "Elenca rosterId+teamName delle rose dell'utente autenticato (claim 'sub' del JWT Cognito, header Authorization: Bearer <token> se l'autenticazione e' attiva - vedi SecurityConfig). Se l'autenticazione non e' configurata torna tutte le rose esistenti."
+					}
+				},
+				{
 					"name": "Get Roster",
 					"request": {
 						"method": "GET",
