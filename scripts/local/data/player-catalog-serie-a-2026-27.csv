@@ -1,0 +1,517 @@
+id;nome;ruolo;squadra
+5841;Svilar;POR;Roma
+5116;Martinez Jo.;POR;Inter
+4431;Carnesecchi;POR;Atalanta
+6966;Butez;POR;Como
+4964;Vicario;POR;Juventus
+4312;Maignan;POR;Milan
+2521;De Gea;POR;Fiorentina
+572;Meret;POR;Napoli
+133;Skorupski;POR;Bologna
+4360;Caprile;POR;Cagliari
+5876;Di Gregorio;POR;Juventus
+6482;Mandas;POR;Lazio
+6462;Okoye;POR;Udinese
+7332;Bijlow;POR;Genoa
+2134;Falcone;POR;Lecce
+7411;Daffara;POR;Parma
+4236;Muric;POR;Sassuolo
+218;Perin;POR;Juventus
+6248;Stankovic F.;POR;Venezia
+4485;Thiam;POR;Monza
+2170;Milinkovic-Savic V.;POR;Napoli
+6415;Palmisani;POR;Frosinone
+7463;Desplanches;POR;Frosinone
+2814;Provedel;POR;Inter
+4;Sportiello;POR;Atalanta
+7533;Happonen;POR;Bologna
+7172;Pessina Mas.;POR;Bologna
+6650;Sherri;POR;Cagliari
+7301;Tornqvist;POR;Como
+2809;Vigorito;POR;Como
+6403;Christensen O.;POR;Fiorentina
+158;Lezzerini;POR;Fiorentina
+7466;Lolic;POR;Frosinone
+219;Sommariva;POR;Genoa
+6569;Stolz;POR;Genoa
+1926;Di Gennaro;POR;Inter
+1930;Pinsoglio;POR;Juventus
+7337;Motta;POR;Lazio
+7534;Renzetti;POR;Lazio
+2815;Terracciano;POR;Milan
+6813;Torriani;POR;Milan
+6682;Pizzignacco;POR;Monza
+7475;Strajnar;POR;Monza
+2845;Contini;POR;Napoli
+6662;Corvi;POR;Parma
+7048;De Marzi;POR;Roma
+610;Gollini;POR;Roma
+4518;Russo A.;POR;Sassuolo
+4867;Turati;POR;Sassuolo
+7457;Mascardi;POR;Torino
+5320;Paleari;POR;Torino
+7363;Siviero;POR;Torino
+543;Padelli;POR;Udinese
+5707;Piana;POR;Udinese
+6671;Grandi;POR;Venezia
+7531;Pozzi;POR;Venezia
+7545;Vismara;POR;Atalanta
+2127;Satalino;POR;Sassuolo
+7557;Penev;POR;Lecce
+7560;Pisseri;POR;Frosinone
+3;Radunovic;POR;Cagliari
+4957;Montipò;POR;Venezia
+4468;Bleve;POR;Lecce
+254;Dimarco;DIF;Inter
+4998;Molina N.;DIF;Roma
+7181;Wesley;DIF;Roma
+4159;Akanji;DIF;Inter
+2788;Bremer;DIF;Juventus
+2296;Mancini;DIF;Roma
+2120;Bastoni;DIF;Inter
+5022;Pavlovic;DIF;Milan
+4409;Rrahmani;DIF;Napoli
+4976;Kalulu;DIF;Juventus
+4317;N'Dicka;DIF;Roma
+6956;Solet;DIF;Udinese
+2514;Stones;DIF;Inter
+5833;Gila;DIF;Milan
+2816;Di Lorenzo;DIF;Napoli
+5982;Spence;DIF;Inter
+5750;Ostigard;DIF;Genoa
+6217;Bisseck;DIF;Inter
+5526;Scalvini;DIF;Atalanta
+6869;Ramon;DIF;Como
+5885;Dodò;DIF;Fiorentina
+4807;Hermoso;DIF;Roma
+5514;Vasquez;DIF;Genoa
+5520;Cambiaso;DIF;Juventus
+5641;Chalobah T.;DIF;Como
+6046;Hien;DIF;Atalanta
+554;Zappacosta;DIF;Atalanta
+6042;Lucumì;DIF;Juventus
+4734;Miranda J.;DIF;Bologna
+4210;Mina;DIF;Cagliari
+5365;Dragusin;DIF;Fiorentina
+6531;Jimenez A.;DIF;Fiorentina
+6814;Norton-Cuffy;DIF;Genoa
+4657;Celik;DIF;Juventus
+6496;Bartesaghi;DIF;Milan
+1852;Spinazzola;DIF;Napoli
+6664;Delprato;DIF;Parma
+5862;Valeri;DIF;Parma
+7529;Koulierakis;DIF;Roma
+4994;Vojvoda;DIF;Udinese
+6727;Couto;DIF;Como
+5701;Obert;DIF;Cagliari
+7414;Kaiki;DIF;Como
+5877;Carlos Augusto;DIF;Inter
+6320;Doekhi;DIF;Lazio
+460;Romagnoli;DIF;Lazio
+6989;Tiago Gabriel;DIF;Lecce
+4401;Gabbia;DIF;Milan
+4751;Tomori;DIF;Milan
+2724;Buongiorno;DIF;Napoli
+6672;Idzes;DIF;Sassuolo
+6642;Coco;DIF;Torino
+5010;Ismajli;DIF;Torino
+6485;Kristensen T.;DIF;Atalanta
+6916;Ahanor;DIF;Atalanta
+4887;Bellanova;DIF;Atalanta
+7219;Bernasconi;DIF;Atalanta
+7212;Heggem;DIF;Bologna
+4433;Zortea;DIF;Bologna
+6867;Valle;DIF;Como
+7294;Valdepenas;DIF;Fiorentina
+7410;Viery;DIF;Fiorentina
+4952;Monterisi;DIF;Frosinone
+6660;Marcandalli;DIF;Genoa
+4177;Pavard;DIF;Inter
+5620;Tavares N.;DIF;Lazio
+2188;Marusic;DIF;Lazio
+4502;Gallo;DIF;Lecce
+7485;Mangas;DIF;Monza
+6202;Beukema;DIF;Napoli
+6495;Comuzzo;DIF;Torino
+5555;Kamara H.;DIF;Udinese
+7253;Bella-Kotchap;DIF;Venezia
+7329;Obrador;DIF;Sassuolo
+2640;Kolasinac;DIF;Atalanta
+7068;Vitik;DIF;Bologna
+5678;Holm;DIF;Bologna
+7532;Kofler;DIF;Cagliari
+7274;Zè Pedro;DIF;Cagliari
+6893;Kempf;DIF;Como
+5449;Parisi;DIF;Fiorentina
+7469;Bracaglia;DIF;Frosinone
+6238;Oyono A.;DIF;Frosinone
+2593;Martin;DIF;Genoa
+6766;Kelly L.;DIF;Juventus
+4817;Pedraza;DIF;Lazio
+6632;Gaspar K.;DIF;Lecce
+6990;Veiga D.;DIF;Lecce
+5840;Olivera;DIF;Napoli
+6986;Rensch;DIF;Roma
+6426;Pedersen;DIF;Torino
+6890;Moreno M.;DIF;Venezia
+5695;Haps;DIF;Venezia
+7069;Fortini;DIF;Torino
+7564;Leysen F.;DIF;Sassuolo
+4461;Zappa;DIF;Cagliari
+7014;Smolcic I.;DIF;Como
+5603;Pongracic;DIF;Fiorentina
+7467;Calvani;DIF;Frosinone
+7537;Mitaj;DIF;Genoa
+5831;Gatti;DIF;Juventus
+7240;Siebert;DIF;Lecce
+2115;Delli Carri;DIF;Monza
+6659;Lucchesi;DIF;Monza
+5838;Birindelli;DIF;Monza
+5307;Valenti;DIF;Parma
+6631;Ghilardi;DIF;Roma
+4374;Walukiewicz;DIF;Sassuolo
+5851;Doig;DIF;Sassuolo
+7526;Comert;DIF;Torino
+4263;Kabasele;DIF;Udinese
+5820;Bertola;DIF;Udinese
+5527;Zanoli;DIF;Udinese
+7312;Arizala;DIF;Udinese
+7538;Halhal;DIF;Venezia
+4845;Correia T.;DIF;Venezia
+4375;Terzic;DIF;Frosinone
+7563;Favasuli;DIF;Napoli
+5578;Kossounou;DIF;Atalanta
+5498;Casale;DIF;Bologna
+7268;Rodriguez Ju.;DIF;Cagliari
+7125;Idrissi R.;DIF;Cagliari
+4378;Ranieri L.;DIF;Fiorentina
+7175;Joao Mario;DIF;Fiorentina
+7540;Akpoguma;DIF;Frosinone
+5757;Cittadini;DIF;Frosinone
+7012;Provstgaard;DIF;Lazio
+7131;Floriani Mussolini;DIF;Lazio
+5739;De Winter;DIF;Milan
+5273;Estupinan;DIF;Milan
+7238;Kouadio;DIF;Monza
+4925;Carboni A.;DIF;Monza
+7235;Troilo;DIF;Parma
+7255;Britschgi;DIF;Parma
+6985;Candè;DIF;Sassuolo
+6892;Schingtienne;DIF;Venezia
+6673;Sverko;DIF;Venezia
+6821;Hainaut;DIF;Venezia
+7326;Helland;DIF;Bologna
+7483;Alhassane;DIF;Bologna
+6896;Van Der Brempt;DIF;Como
+6977;Otoa;DIF;Genoa
+7413;Puczka;DIF;Genoa
+791;Sabelli;DIF;Genoa
+2263;Lazzari;DIF;Lazio
+2728;Pellegrini Lu.;DIF;Lazio
+6883;Jean;DIF;Lecce
+7525;Diawara S.;DIF;Milan
+6638;Marin R.;DIF;Napoli
+252;Biraghi;DIF;Torino
+6925;Palma;DIF;Udinese
+5994;Ebosse;DIF;Udinese
+7478;Franjic;DIF;Venezia
+6681;Sagrado;DIF;Venezia
+7548;Aurelio;DIF;Cagliari
+5812;Terracciano F.;DIF;Milan
+487;De Silvestri;DIF;Bologna
+418;Goldaniga;DIF;Como
+5424;Amey;DIF;Frosinone
+7470;Oyono J.;DIF;Frosinone
+7471;Corrado;DIF;Frosinone
+6244;Matturro;DIF;Genoa
+294;Rugani;DIF;Juventus
+6039;Cabal;DIF;Juventus
+327;Patric;DIF;Lazio
+7182;Ndaba;DIF;Lecce
+5399;Antov;DIF;Monza
+7476;Bakoune;DIF;Monza
+6809;Marianucci;DIF;Napoli
+5481;Mazzocchi;DIF;Napoli
+7202;Ndiaye;DIF;Parma
+6149;Carboni F.;DIF;Parma
+7260;Ziolkowski;DIF;Roma
+6189;Missori;DIF;Sassuolo
+7156;Pieragnolo;DIF;Sassuolo
+7356;Mlacic;DIF;Udinese
+6021;Abankwah;DIF;Udinese
+7454;Gomes;DIF;Venezia
+7154;Odenthal;DIF;Sassuolo
+7553;Omar Fayed;DIF;Frosinone
+7573;Cinquegrano;DIF;Sassuolo
+6875;Paz N.;CEN;Como
+4777;McTominay;CEN;Napoli
+2194;Calhanoglu;CEN;Inter
+2167;Orsolini;CEN;Bologna
+2423;Pulisic;CEN;Milan
+2379;Rabiot;CEN;Milan
+7126;Baturina;CEN;Como
+7556;Mora;CEN;Roma
+5559;Da Cunha;CEN;Como
+2766;Zaniolo;CEN;Udinese
+6908;Atta;CEN;Fiorentina
+1870;Barella;CEN;Inter
+4973;McKennie;CEN;Juventus
+632;Zaccagni;CEN;Lazio
+2517;De Bruyne;CEN;Napoli
+5687;Vlasic;CEN;Torino
+5800;Gudmundsson A.;CEN;Fiorentina
+7314;Taylor K.;CEN;Lazio
+5792;Ederson D.S.;CEN;Atalanta
+5119;Samardzic;CEN;Atalanta
+7129;Rodriguez Je.;CEN;Como
+7436;Alajbegovic;CEN;Juventus
+6884;Conceicao;CEN;Juventus
+2606;Modric;CEN;Milan
+7078;Mastantuono;CEN;Fiorentina
+6372;Moreira;CEN;Milan
+5172;Jones C.;CEN;Inter
+6844;Rowe;CEN;Bologna
+5823;Baldanzi;CEN;Genoa
+4220;Zambo Anguissa;CEN;Napoli
+6151;Perrone;CEN;Como
+152;Zielinski;CEN;Inter
+5562;Thuram K.;CEN;Juventus
+4892;Saelemaekers;CEN;Milan
+536;Politano;CEN;Napoli
+5589;Konè M.;CEN;Roma
+5844;Thorstvedt;CEN;Sassuolo
+5888;Casadei;CEN;Torino
+6684;Ekkelenkamp;CEN;Udinese
+530;Pellegrini Lo.;CEN;Roma
+2077;Pasalic;CEN;Atalanta
+184;Bernardeschi;CEN;Bologna
+1933;Mandragora;CEN;Fiorentina
+5500;Cancellieri;CEN;Lazio
+6398;Isaksen;CEN;Lazio
+6717;Konè I.;CEN;Sassuolo
+2765;Odgaard;CEN;Bologna
+4436;Cambiaghi;CEN;Bologna
+4465;Fagioli;CEN;Fiorentina
+6294;Ndour;CEN;Fiorentina
+6274;Diouf;CEN;Inter
+7070;Sucic P.;CEN;Inter
+827;Locatelli;CEN;Juventus
+5878;Colpani;CEN;Monza
+7223;Vergara;CEN;Napoli
+779;Cristante;CEN;Roma
+7551;Schmid;CEN;Frosinone
+4364;Gaetano;CEN;Atalanta
+5858;Ferguson;CEN;Bologna
+6010;Fazzini;CEN;Cagliari
+7472;Calò;CEN;Frosinone
+5791;Frendrup;CEN;Genoa
+2848;Frattesi;CEN;Lazio
+2741;Pessina;CEN;Monza
+4287;Lobotka;CEN;Napoli
+6666;Bernabè;CEN;Parma
+5735;Volpato;CEN;Sassuolo
+6218;Oristanio;CEN;Torino
+6783;Unai Gomez;CEN;Udinese
+5946;Sow;CEN;Genoa
+4479;Elmas;CEN;Atalanta
+5422;Zalewski;CEN;Atalanta
+5298;Pobega;CEN;Bologna
+4870;Adopo;CEN;Cagliari
+4260;Winks;CEN;Cagliari
+5036;Caqueret;CEN;Como
+6678;Liberali;CEN;Como
+7464;Oulai;CEN;Fiorentina
+6020;Ellertsson;CEN;Genoa
+5761;Zhegrova;CEN;Juventus
+4459;Rovella;CEN;Lazio
+5504;Coulibaly L.;CEN;Lecce
+6549;Pierotti;CEN;Lecce
+4856;Chukwueze;CEN;Milan
+6593;Akinsanmiro;CEN;Monza
+4349;Nicolussi Caviglia;CEN;Parma
+6680;Karlstrom;CEN;Udinese
+5674;Basic;CEN;Venezia
+7146;Tourè I.;CEN;Monza
+7528;Amondarain;CEN;Bologna
+7311;Romano;CEN;Cagliari
+6640;Felici;CEN;Cagliari
+7412;Milla;CEN;Como
+7127;Addai;CEN;Como
+5998;Zerbin;CEN;Frosinone
+7409;Meichtry;CEN;Genoa
+2857;Traorè Hj.;CEN;Genoa
+2529;Mkhitaryan;CEN;Inter
+5685;Koopmeiners;CEN;Juventus
+6629;Dele-Bashiru;CEN;Lazio
+6015;Berisha M.;CEN;Lecce
+7318;Gandelman;CEN;Lecce
+4686;Fofana Y.;CEN;Milan
+6898;Keita M.;CEN;Parma
+6190;Pisilli;CEN;Roma
+2528;Matic;CEN;Sassuolo
+6677;Adzic;CEN;Sassuolo
+7036;Bakola;CEN;Sassuolo
+7060;Cacciamani;CEN;Torino
+6170;Gineitis;CEN;Torino
+7198;Piotrowski;CEN;Udinese
+5507;Busio;CEN;Venezia
+5319;Sohm;CEN;Venezia
+6994;Perez K.;CEN;Venezia
+7550;Grillitsch;CEN;Frosinone
+22;De Roon;CEN;Atalanta
+6054;Moro N.;CEN;Bologna
+6424;Prati;CEN;Cagliari
+6206;Fabbian;CEN;Fiorentina
+7473;Cichella;CEN;Frosinone
+7474;Koutsoupias;CEN;Frosinone
+7341;Amorim;CEN;Genoa
+5301;Luis Henrique;CEN;Inter
+4911;Douglas Luiz;CEN;Juventus
+333;Cataldi;CEN;Lazio
+7322;Ngom;CEN;Lecce
+5453;Ricci S.;CEN;Milan
+7203;Jashari;CEN;Milan
+4199;Loftus-Cheek;CEN;Milan
+6252;Folorunsho;CEN;Napoli
+6207;Almqvist;CEN;Parma
+6271;El Aynaoui;CEN;Roma
+7535;Fitz-Jim;CEN;Torino
+6005;Ilkhan;CEN;Torino
+6827;Njie;CEN;Torino
+6024;Sulemana I.;CEN;Atalanta
+6895;Dominguez B.;CEN;Sassuolo
+1871;Deiola;CEN;Cagliari
+4947;Brescianini;CEN;Fiorentina
+6241;Gelli F.;CEN;Frosinone
+6506;Fini;CEN;Frosinone
+4970;Messias;CEN;Genoa
+6503;Stankovic A.;CEN;Inter
+5813;Miretti;CEN;Juventus
+7477;Colombo L.;CEN;Monza
+5131;Gilmour;CEN;Napoli
+7209;Sorensen O.;CEN;Parma
+7536;Diallo O.;CEN;Parma
+7183;Aboukhlal;CEN;Torino
+7208;Miller L.;CEN;Udinese
+5872;Helgason;CEN;Venezia
+6618;Cissè A.;CEN;Milan
+6225;El Azzouzi O.;CEN;Bologna
+6815;Fadera;CEN;Cagliari
+6903;Hasa;CEN;Frosinone
+6917;Masini;CEN;Frosinone
+6980;Venturino;CEN;Genoa
+5457;Maleh;CEN;Lecce
+5295;Musah;CEN;Milan
+5880;Ciurria;CEN;Monza
+7138;Ordonez C.;CEN;Parma
+6219;Boloca;CEN;Sassuolo
+6246;Lipani;CEN;Sassuolo
+7418;Chakvetadze;CEN;Udinese
+526;Duncan;CEN;Venezia
+7165;Liteta;CEN;Cagliari
+7357;Lahdo;CEN;Como
+7456;El Azzouzi A.;CEN;Frosinone
+5725;Kone B.;CEN;Frosinone
+6191;Belahyane;CEN;Lazio
+7345;Przyborek;CEN;Lazio
+7248;Gorter;CEN;Lecce
+6410;Kaba;CEN;Lecce
+7319;Fofana Sa.;CEN;Lecce
+7276;Cremaschi;CEN;Parma
+7157;Iannoni;CEN;Sassuolo
+5007;Ilic;CEN;Torino
+6889;Anjorin;CEN;Torino
+7392;Camara A.;CEN;Udinese
+6212;Zarraga;CEN;Udinese
+7481;Dagasso;CEN;Venezia
+6592;Forson O.;CEN;Monza
+7571;Laerke;CEN;Lecce
+7572;Comotto;CEN;Milan
+2764;Martinez L.;ATT;Inter
+5585;Malen;ATT;Roma
+4871;Thuram;ATT;Inter
+6052;Hojlund;ATT;Napoli
+6397;Ramos G.;ATT;Milan
+5951;Kolo Muani;ATT;Juventus
+2097;Kean;ATT;Fiorentina
+6434;Yildiz;ATT;Juventus
+7017;Douvikas;ATT;Como
+2137;Scamacca;ATT;Atalanta
+5637;Davis K.;ATT;Udinese
+6435;Krstovic;ATT;Atalanta
+4510;Leao;ATT;Milan
+531;Berardi;ATT;Sassuolo
+5995;De Ketelaere;ATT;Atalanta
+6675;Dovbyk;ATT;Bologna
+7071;Esposito F.P.;ATT;Inter
+7023;Pellegrino M.;ATT;Fiorentina
+6060;Laurientè;ATT;Sassuolo
+2061;Simeone;ATT;Torino
+7351;Santos A.;ATT;Napoli
+309;Dybala;ATT;Roma
+6572;Castro S.;ATT;Roma
+4371;Raspadori;ATT;Atalanta
+4463;Esposito Se.;ATT;Cagliari
+4728;Nkunku;ATT;Milan
+2038;Pinamonti;ATT;Sassuolo
+7547;Kevin Carlos;ATT;Cagliari
+5734;Soulè;ATT;Roma
+7484;Adams A.;ATT;Venezia
+6967;Diao;ATT;Como
+4923;Colombo;ATT;Genoa
+6229;Tourè E.;ATT;Parma
+5672;Dia;ATT;Lazio
+7313;Ratkov;ATT;Lazio
+7347;Bowie;ATT;Sassuolo
+7554;Romero D.;ATT;Parma
+6530;Ghedjemis;ATT;Frosinone
+5544;David;ATT;Juventus
+5029;Geubbels;ATT;Lecce
+2155;Cutrone;ATT;Monza
+6646;Adams C.;ATT;Torino
+4359;Piccoli;ATT;Bologna
+6164;Vitinha O.;ATT;Genoa
+6904;Yeboah J.;ATT;Venezia
+7449;Rrahmani Al.;ATT;Venezia
+5436;Raimondo;ATT;Frosinone
+6669;Bonny;ATT;Inter
+7252;Stulic;ATT;Lecce
+608;Zapata D.;ATT;Torino
+5918;Sulemana K.;ATT;Atalanta
+6598;Mutandwa;ATT;Cagliari
+2832;Boga;ATT;Juventus
+6556;Noslin;ATT;Lazio
+7008;Gimenez;ATT;Milan
+6831;Neres;ATT;Napoli
+4896;Maldini;ATT;Cagliari
+6519;Camarda;ATT;Milan
+5882;Mota;ATT;Monza
+7213;Frigan;ATT;Parma
+4387;Adorante;ATT;Venezia
+2012;Milik;ATT;Juventus
+6243;Borrelli;ATT;Cagliari
+7374;Mendy P.;ATT;Cagliari
+313;Morata;ATT;Como
+6204;Kvernadze;ATT;Frosinone
+7453;Havel;ATT;Genoa
+7162;Giovane;ATT;Napoli
+7349;Kulenovic;ATT;Torino
+7272;Gueye;ATT;Udinese
+7546;Robinson J.;ATT;Monza
+7128;Kuhn;ATT;Como
+6822;Ekhator;ATT;Juventus
+7001;N'Dri;ATT;Lecce
+7523;Varela G.;ATT;Monza
+7120;Lang;ATT;Napoli
+6215;Lucca;ATT;Napoli
+7342;Elphege;ATT;Parma
+7249;Buksa;ATT;Udinese
+7338;Albarracin;ATT;Cagliari
+7317;Trepy;ATT;Cagliari
+7027;Azon;ATT;Como
+6981;Vaz;ATT;Roma
+7161;Bayo V.;ATT;Udinese
+7408;Lisman;ATT;Venezia
+7482;Lauberbach;ATT;Venezia
+7561;Lontani;ATT;Parma
+7568;De Martis;ATT;Parma
