@@ -332,6 +332,37 @@
 						},
 						"description": "Importa/aggiorna l'anagrafica completa di Serie A (PlayerCatalog), usata da 'Roster > Bulk Add Players' per risolvere nome+ruolo in un id. Da rilanciare ad ogni nuova stagione o quando cambiano le quotazioni. Righe con ruolo non riconosciuto non bloccano l'import, finiscono in 'errors'."
 					}
+				},
+				{
+					"name": "Add Player Catalog Entry",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Accept",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/fanta-private/playercatalog",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"fanta-private",
+								"playercatalog"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"nome\": \"Nuovo Acquisto\",\n  \"ruolo\": \"DIF\",\n  \"squadra\": \"Milan\"\n}"
+						},
+						"description": "Aggiunge manualmente un calciatore in anagrafica PlayerCatalog (a differenza di 'Import Player Catalog (CSV)', pensato per il caricamento massivo) - utile per un giocatore mancante dalle quotazioni importate. Il catalogId viene generato automaticamente. Rifiutata con 409 se esiste gia' una voce con lo stesso nome e ruolo."
+					}
 				}
 			]
 		},

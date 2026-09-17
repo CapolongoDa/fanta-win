@@ -4,7 +4,7 @@ info:
   description: >-
     API REST B2B per la gestione della rosa su DynamoDB e il calcolo predittivo 
     della formazione ottimale di Fantacalcio (FantaClaude).
-  version: 2.12.0
+  version: 2.13.0
   x-api-id: fantaclaude-lineup-manager-api-b2b
   termsOfService: https://fantaclaude.ai/termini-di-servizio
   contact:
@@ -623,6 +623,51 @@ paths:
               schema:
                 $ref: 'problem-internal.yaml#/components/schemas/Problem'
 
+  /fanta-private/playercatalog:
+    post:
+      summary: Aggiunge manualmente un calciatore in anagrafica PlayerCatalog
+      description: >-
+        Crea una singola voce in PlayerCatalog (a differenza di /fanta-private/playercatalog/import,
+        pensato per il caricamento massivo via CSV) - utile per un giocatore mancante dalle quotazioni
+        importate (es. nuovo arrivo a calciomercato chiuso). L'id univoco (catalogId) viene generato
+        automaticamente, il chiamante non lo fornisce mai. Rifiutata con 409 se esiste gia' una voce
+        con lo stesso nome (normalizzato, senza distinguere maiuscole/accenti) e ruolo, per evitare
+        ambiguita' nella risoluzione nome+ruolo di /fanta-private/addPlayers.
+      operationId: addPlayerCatalogEntry
+      tags:
+        - PlayerCatalog
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddPlayerCatalogEntryRequest'
+      responses:
+        '201':
+          description: Calciatore creato in anagrafica con successo
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlayerCatalogEntry'
+        '400':
+          description: nome, ruolo o squadra mancanti, oppure ruolo non riconosciuto
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
+        '409':
+          description: Esiste gia' una voce con lo stesso nome e ruolo in PlayerCatalog
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
+        '503':
+          description: Storage DynamoDB temporaneamente non raggiungibile
+          content:
+            application/json:
+              schema:
+                $ref: 'problem-internal.yaml#/components/schemas/Problem'
+
 components:
   schemas:
     RosterSummary:
@@ -659,6 +704,57 @@ components:
           items:
             type: string
           example: ["riga 12: ruolo non riconosciuto: 'X' (attesi P/D/C/A, POR/DIF/CEN/ATT o CC/DC)"]
+
+    AddPlayerCatalogEntryRequest:
+      type: object
+      required:
+        - nome
+        - ruolo
+        - squadra
+      properties:
+        nome:
+          type: string
+          description: >-
+            Nome del calciatore come deve comparire in anagrafica (usato poi per la risoluzione
+            nome+ruolo di /fanta-private/addPlayers - vedi PlayerCatalogResolverService). Se il
+            cognome puo' essere condiviso da piu' giocatori nello stesso ruolo, usa un suffisso
+            disambiguante come fa fantacalcio.it (es. "Oyono A.").
+          example: Nuovo Acquisto
+        ruolo:
+          type: string
+          description: Ruolo del calciatore, sigla classica (P/D/C/A), spelling completo (POR/DIF/CEN/ATT) o alias Mantra (CC/DC)
+          example: DIF
+        squadra:
+          type: string
+          description: Squadra reale di Serie A del calciatore
+          example: Milan
+      example:
+        nome: Nuovo Acquisto
+        ruolo: DIF
+        squadra: Milan
+
+    PlayerCatalogEntry:
+      type: object
+      required:
+        - catalogId
+        - nome
+        - ruolo
+        - squadra
+      properties:
+        catalogId:
+          type: string
+          description: Id univoco generato automaticamente, da riusare come playerId quando il giocatore viene aggiunto a una rosa
+          example: 3f2504e0-4f89-11d3-9a0c-0305e82c3301
+        nome:
+          type: string
+          example: Nuovo Acquisto
+        ruolo:
+          type: string
+          description: Ruolo canonico (POR/DIF/CEN/ATT)
+          example: DIF
+        squadra:
+          type: string
+          example: Milan
 
     BulkAddPlayerEntry:
       type: object
